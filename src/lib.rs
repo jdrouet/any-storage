@@ -2,7 +2,9 @@ use std::io::Result;
 use std::ops::RangeBounds;
 use std::path::PathBuf;
 
+pub mod http;
 pub mod local;
+
 pub(crate) mod util;
 
 pub trait Store {
