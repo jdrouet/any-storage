@@ -14,6 +14,10 @@ pub trait Store {
     type Directory: StoreDirectory;
     type File: StoreFile;
 
+    fn root(&self) -> impl Future<Output = Result<Self::Directory>> {
+        self.get_dir("/")
+    }
+
     fn get_dir<P: Into<PathBuf>>(&self, path: P) -> impl Future<Output = Result<Self::Directory>>;
     fn get_file<P: Into<PathBuf>>(&self, path: P) -> impl Future<Output = Result<Self::File>>;
 }
