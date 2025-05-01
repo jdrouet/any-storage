@@ -9,7 +9,10 @@ use std::{
 
 use bytes::Bytes;
 use futures::{Stream, StreamExt};
+use reqwest::header::{CONTENT_LENGTH, LAST_MODIFIED};
 use reqwest::{Client, StatusCode, header};
+use time::OffsetDateTime;
+use time::format_description::well_known::Rfc2822;
 
 mod parser;
 
@@ -193,6 +196,7 @@ impl std::fmt::Debug for HttpStoreFile {
 
 impl crate::StoreFile for HttpStoreFile {
     type FileReader = HttpStoreFileReader;
+    type Metadata = HttpStoreFileMetadata;
 
     async fn exists(&self) -> Result<bool> {
         let res = self
@@ -205,6 +209,30 @@ impl crate::StoreFile for HttpStoreFile {
             StatusCode::NOT_FOUND => Ok(false),
             other => error_from_status(other).map(|_| true),
         }
+    }
+
+    async fn metadata(&self) -> Result<Self::Metadata> {
+        let res = self
+            .client
+            .head(&self.url)
+            .send()
+            .await
+            .map_err(Error::other)?;
+        error_from_status(res.status())?;
+        let size = res
+            .headers()
+            .get(CONTENT_LENGTH)
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| value.parse::<u64>().ok())
+            .unwrap_or(0);
+        let modified = res
+            .headers()
+            .get(LAST_MODIFIED)
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| OffsetDateTime::parse(value, &Rfc2822).ok())
+            .map(|dt| dt.unix_timestamp() as u64)
+            .unwrap_or(0);
+        Ok(HttpStoreFileMetadata { size, modified })
     }
 
     async fn read<R: std::ops::RangeBounds<u64>>(
@@ -222,6 +250,25 @@ impl crate::StoreFile for HttpStoreFile {
         // TODO handle when status code is not 206
         let stream = res.bytes_stream().boxed();
         Ok(HttpStoreFileReader { stream })
+    }
+}
+
+pub struct HttpStoreFileMetadata {
+    size: u64,
+    modified: u64,
+}
+
+impl super::StoreMetadata for HttpStoreFileMetadata {
+    fn size(&self) -> u64 {
+        self.size
+    }
+
+    fn created(&self) -> u64 {
+        0
+    }
+
+    fn modified(&self) -> u64 {
+        self.modified
     }
 }
 
@@ -289,9 +336,10 @@ mod tests {
     use std::io::ErrorKind;
 
     use futures::StreamExt;
+    use reqwest::header::{CONTENT_LENGTH, LAST_MODIFIED};
     use tokio::io::AsyncReadExt;
 
-    use crate::{Store, StoreDirectory, StoreFile, http::HttpStore};
+    use crate::{Store, StoreDirectory, StoreFile, StoreMetadata, http::HttpStore};
 
     #[tokio::test]
     async fn file_should_check_if_file_exists() {
@@ -304,6 +352,25 @@ mod tests {
         let store = HttpStore::new(srv.url());
         let file = store.get_file("/not-found.txt").await.unwrap();
         assert!(!file.exists().await.unwrap());
+        mock.assert_async().await;
+    }
+
+    #[tokio::test]
+    async fn file_meta_should_give_all() {
+        let mut srv = mockito::Server::new_async().await;
+        let mock = srv
+            .mock("HEAD", "/test/file.txt")
+            .with_status(200)
+            .with_header(CONTENT_LENGTH, "1234")
+            .with_header(LAST_MODIFIED, "Thu, 01 May 2025 09:57:28 GMT")
+            .create_async()
+            .await;
+        let store = HttpStore::new(srv.url());
+        let file = store.get_file("/test/file.txt").await.unwrap();
+        let meta = file.metadata().await.unwrap();
+        assert_eq!(meta.size, 1234);
+        assert_eq!(meta.created(), 0);
+        assert_eq!(meta.modified(), 1746093448);
         mock.assert_async().await;
     }
 

@@ -1,8 +1,10 @@
 use std::io::{Error, ErrorKind};
 use std::ops::{Bound, RangeBounds};
+use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::task::Poll;
+use std::time::SystemTime;
 use std::{io::Result, pin::Pin};
 
 use futures::Stream;
@@ -110,9 +112,32 @@ pub struct LocalStoreFile {
 
 impl StoreFile for LocalStoreFile {
     type FileReader = LocalStoreFileReader;
+    type Metadata = LocalStoreFileMetadata;
 
     async fn exists(&self) -> Result<bool> {
         tokio::fs::try_exists(&self.path).await
+    }
+
+    async fn metadata(&self) -> Result<Self::Metadata> {
+        let meta = tokio::fs::metadata(&self.path).await?;
+        let size = meta.size();
+        let created = meta
+            .created()
+            .ok()
+            .and_then(|v| v.duration_since(SystemTime::UNIX_EPOCH).ok())
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let modified = meta
+            .modified()
+            .ok()
+            .and_then(|v| v.duration_since(SystemTime::UNIX_EPOCH).ok())
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        Ok(LocalStoreFileMetadata {
+            size,
+            created,
+            modified,
+        })
     }
 
     async fn read<R: RangeBounds<u64>>(&self, range: R) -> Result<Self::FileReader> {
@@ -141,6 +166,26 @@ impl StoreFile for LocalStoreFile {
             end,
             position: start,
         })
+    }
+}
+
+pub struct LocalStoreFileMetadata {
+    size: u64,
+    created: u64,
+    modified: u64,
+}
+
+impl super::StoreMetadata for LocalStoreFileMetadata {
+    fn size(&self) -> u64 {
+        self.size
+    }
+
+    fn created(&self) -> u64 {
+        self.created
+    }
+
+    fn modified(&self) -> u64 {
+        self.modified
     }
 }
 
@@ -241,5 +286,18 @@ mod tests {
 
         let content = include_bytes!("./lib.rs");
         assert_eq!(buffer, content[0..10]);
+    }
+
+    #[tokio::test]
+    async fn should_read_lib_metadata() {
+        let current = PathBuf::from(env!("PWD"));
+        let store = LocalStore::from(current);
+
+        let lib = store.get_file("/src/lib.rs").await.unwrap();
+        let meta = lib.metadata().await.unwrap();
+
+        assert!(meta.size > 0);
+        assert!(meta.created > 0);
+        assert!(meta.modified > 0);
     }
 }

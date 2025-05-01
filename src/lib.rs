@@ -29,8 +29,10 @@ pub trait StoreDirectoryReader<E>: Stream<Item = Result<E>> {}
 
 pub trait StoreFile {
     type FileReader: StoreFileReader;
+    type Metadata: StoreMetadata;
 
     fn exists(&self) -> impl Future<Output = Result<bool>>;
+    fn metadata(&self) -> impl Future<Output = Result<Self::Metadata>>;
     fn read<R: RangeBounds<u64>>(&self, range: R)
     -> impl Future<Output = Result<Self::FileReader>>;
 }
@@ -79,4 +81,10 @@ impl<File, Directory> Entry<File, Directory> {
             other => Err(other),
         }
     }
+}
+
+pub trait StoreMetadata {
+    fn size(&self) -> u64;
+    fn created(&self) -> u64;
+    fn modified(&self) -> u64;
 }
