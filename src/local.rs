@@ -1,12 +1,12 @@
 use std::borrow::Cow;
-use std::io::{Error, ErrorKind};
+use std::io::{Error, ErrorKind, Result};
 use std::ops::{Bound, RangeBounds};
 use std::os::unix::fs::MetadataExt;
 use std::path::{Component, PathBuf};
+use std::pin::Pin;
 use std::sync::Arc;
 use std::task::Poll;
 use std::time::SystemTime;
-use std::{io::Result, pin::Pin};
 
 use futures::Stream;
 
@@ -254,9 +254,8 @@ mod tests {
 
     use tokio::io::AsyncReadExt;
 
-    use crate::Store;
-
     use super::*;
+    use crate::Store;
 
     #[tokio::test]
     async fn should_not_go_in_parent_folder() {

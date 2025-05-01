@@ -1,4 +1,5 @@
-use any_storage::{Store, StoreDirectory, StoreFile, StoreMetadata, http::HttpStore};
+use any_storage::http::HttpStore;
+use any_storage::{Store, StoreDirectory, StoreFile, StoreMetadata};
 use futures::StreamExt;
 
 #[tokio::test]

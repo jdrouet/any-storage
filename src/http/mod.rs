@@ -1,13 +1,10 @@
 use std::borrow::Cow;
 use std::io::{Error, ErrorKind, Result};
-use std::path::Component;
-use std::{
-    ops::{Bound, RangeBounds},
-    path::PathBuf,
-    pin::Pin,
-    sync::Arc,
-    task::Poll,
-};
+use std::ops::{Bound, RangeBounds};
+use std::path::{Component, PathBuf};
+use std::pin::Pin;
+use std::sync::Arc;
+use std::task::Poll;
 
 use bytes::Bytes;
 use futures::{Stream, StreamExt};
@@ -358,7 +355,8 @@ mod tests {
     use reqwest::header::{CONTENT_LENGTH, LAST_MODIFIED};
     use tokio::io::AsyncReadExt;
 
-    use crate::{Store, StoreDirectory, StoreFile, StoreMetadata, http::HttpStore};
+    use crate::http::HttpStore;
+    use crate::{Store, StoreDirectory, StoreFile, StoreMetadata};
 
     #[test_case::test_case("http://localhost", "/foo.txt", "http://localhost/foo.txt"; "root with simple path with prefix")]
     #[test_case::test_case("http://localhost", "foo.txt", "http://localhost/foo.txt"; "root with simple path without prefix")]
