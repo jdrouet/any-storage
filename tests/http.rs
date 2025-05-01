@@ -4,7 +4,7 @@ use futures::StreamExt;
 #[tokio::test]
 async fn scan_irrigationtoolbox() -> std::io::Result<()> {
     let base_url = "https://irrigationtoolbox.com/NEH";
-    let store = HttpStore::new(base_url);
+    let store = HttpStore::new(base_url)?;
     let root = store.get_dir("/").await?;
     let reader = root.read().await?;
     let entries = reader.collect::<Vec<_>>().await;
@@ -18,6 +18,7 @@ async fn scan_irrigationtoolbox() -> std::io::Result<()> {
     assert!(!files.is_empty());
 
     for file in files {
+        assert!(file.filename().is_some());
         let meta = file.metadata().await?;
         assert_ne!(meta.size(), 0);
     }

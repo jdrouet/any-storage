@@ -1,7 +1,8 @@
+use std::borrow::Cow;
 use std::io::{Error, ErrorKind};
 use std::ops::{Bound, RangeBounds};
 use std::os::unix::fs::MetadataExt;
-use std::path::PathBuf;
+use std::path::{Component, PathBuf};
 use std::sync::Arc;
 use std::task::Poll;
 use std::time::SystemTime;
@@ -114,6 +115,18 @@ impl StoreFile for LocalStoreFile {
     type FileReader = LocalStoreFileReader;
     type Metadata = LocalStoreFileMetadata;
 
+    fn filename(&self) -> Option<Cow<'_, str>> {
+        self.path
+            .components()
+            .rev()
+            .filter_map(|item| match item {
+                Component::Normal(inner) => Some(inner),
+                _ => None,
+            })
+            .next()
+            .map(|value| value.to_string_lossy())
+    }
+
     async fn exists(&self) -> Result<bool> {
         tokio::fs::try_exists(&self.path).await
     }
@@ -224,7 +237,7 @@ impl tokio::io::AsyncRead for LocalStoreFileReader {
         match pinned_file.poll_read(cx, &mut temp_read_buf) {
             Poll::Ready(Ok(())) => {
                 let bytes_read = temp_read_buf.filled().len();
-                buf.put_slice(&temp_read_buf.filled());
+                buf.put_slice(temp_read_buf.filled());
                 this.position += bytes_read as u64;
                 Poll::Ready(Ok(()))
             }

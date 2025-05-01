@@ -1,4 +1,6 @@
+use std::borrow::Cow;
 use std::io::{Error, ErrorKind, Result};
+use std::path::Component;
 use std::{
     ops::{Bound, RangeBounds},
     path::PathBuf,
@@ -9,8 +11,9 @@ use std::{
 
 use bytes::Bytes;
 use futures::{Stream, StreamExt};
+use percent_encoding::percent_decode_str;
 use reqwest::header::{CONTENT_LENGTH, LAST_MODIFIED};
-use reqwest::{Client, StatusCode, header};
+use reqwest::{Client, StatusCode, Url, header};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc2822;
 
@@ -58,7 +61,7 @@ impl<R: RangeBounds<u64>> std::fmt::Display for RangeHeader<R> {
 }
 
 struct InnerHttpStore {
-    base_url: String,
+    base_url: Url,
     parser: parser::Parser,
     client: Arc<reqwest::Client>,
 }
@@ -66,12 +69,31 @@ struct InnerHttpStore {
 pub struct HttpStore(Arc<InnerHttpStore>);
 
 impl HttpStore {
-    pub fn new(base_url: impl Into<String>) -> Self {
-        Self(Arc::new(InnerHttpStore {
+    pub fn new(base_url: impl AsRef<str>) -> Result<Self> {
+        let base_url = Url::parse(base_url.as_ref())
+            .map_err(|err| Error::new(ErrorKind::InvalidInput, err))?;
+        Ok(Self(Arc::new(InnerHttpStore {
             base_url: base_url.into(),
             parser: parser::Parser::default(),
             client: Arc::new(reqwest::Client::new()),
-        }))
+        })))
+    }
+
+    fn get_path(&self, path: impl Into<std::path::PathBuf>) -> Result<Url> {
+        let path = path.into();
+        let mut base_url = self.0.base_url.clone();
+        if let Ok(mut segments) = base_url.path_segments_mut() {
+            for cmp in path.components().filter_map(|item| match item {
+                Component::Normal(inner) => Some(inner),
+                _ => None,
+            }) {
+                segments.push(&cmp.to_string_lossy());
+            }
+        } else {
+            base_url.set_path(&path.to_string_lossy());
+        }
+
+        Ok(base_url)
     }
 }
 
@@ -80,23 +102,17 @@ impl crate::Store for HttpStore {
     type File = HttpStoreFile;
 
     async fn get_file<P: Into<std::path::PathBuf>>(&self, path: P) -> Result<Self::File> {
-        let path = path.into();
-        let relative = crate::util::merge_path(&PathBuf::from("/"), &path)?;
-        let url = format!("{}{}", self.0.base_url, relative.to_string_lossy());
         Ok(HttpStoreFile {
             client: self.0.client.clone(),
-            url,
+            url: self.get_path(path)?,
         })
     }
 
     async fn get_dir<P: Into<PathBuf>>(&self, path: P) -> Result<Self::Directory> {
-        let path = path.into();
-        let relative = crate::util::merge_path(&PathBuf::from("/"), &path)?;
-        let url = format!("{}{}", self.0.base_url, relative.to_string_lossy());
         Ok(HttpStoreDirectory {
             parser: self.0.parser.clone(),
             client: self.0.client.clone(),
-            url,
+            url: self.get_path(path)?,
         })
     }
 }
@@ -104,7 +120,7 @@ impl crate::Store for HttpStore {
 pub struct HttpStoreDirectory {
     parser: parser::Parser,
     client: Arc<reqwest::Client>,
-    url: String,
+    url: Url,
 }
 
 impl std::fmt::Debug for HttpStoreDirectory {
@@ -120,7 +136,7 @@ impl crate::StoreDirectory for HttpStoreDirectory {
     type Reader = HttpStoreDirectoryReader;
 
     async fn exists(&self) -> Result<bool> {
-        match self.client.head(&self.url).send().await {
+        match self.client.head(self.url.clone()).send().await {
             Ok(res) => match res.status() {
                 StatusCode::NOT_FOUND => Ok(false),
                 other => error_from_status(other).map(|_| true),
@@ -132,7 +148,7 @@ impl crate::StoreDirectory for HttpStoreDirectory {
     async fn read(&self) -> Result<Self::Reader> {
         let res = self
             .client
-            .get(&self.url)
+            .get(self.url.clone())
             .send()
             .await
             .map_err(Error::other)?;
@@ -153,7 +169,7 @@ impl crate::StoreDirectory for HttpStoreDirectory {
 pub struct HttpStoreDirectoryReader {
     client: Arc<reqwest::Client>,
     parser: parser::Parser,
-    url: String,
+    url: Url,
     entries: Vec<String>,
 }
 
@@ -170,7 +186,7 @@ impl Stream for HttpStoreDirectoryReader {
             Poll::Ready(Some(HttpStoreEntry::new(
                 self.client.clone(),
                 self.parser.clone(),
-                &self.url,
+                self.url.clone(),
                 entry,
             )))
         } else {
@@ -183,7 +199,7 @@ impl crate::StoreDirectoryReader<HttpStoreEntry> for HttpStoreDirectoryReader {}
 
 pub struct HttpStoreFile {
     client: Arc<reqwest::Client>,
-    url: String,
+    url: Url,
 }
 
 impl std::fmt::Debug for HttpStoreFile {
@@ -198,10 +214,18 @@ impl crate::StoreFile for HttpStoreFile {
     type FileReader = HttpStoreFileReader;
     type Metadata = HttpStoreFileMetadata;
 
+    fn filename(&self) -> Option<Cow<'_, str>> {
+        let mut segment = self.url.path_segments()?;
+        segment
+            .next_back()
+            .map(|value| percent_decode_str(value).decode_utf8_lossy().to_string())
+            .map(Cow::Owned)
+    }
+
     async fn exists(&self) -> Result<bool> {
         let res = self
             .client
-            .head(&self.url)
+            .head(self.url.clone())
             .send()
             .await
             .map_err(Error::other)?;
@@ -214,7 +238,7 @@ impl crate::StoreFile for HttpStoreFile {
     async fn metadata(&self) -> Result<Self::Metadata> {
         let res = self
             .client
-            .head(&self.url)
+            .head(self.url.clone())
             .send()
             .await
             .map_err(Error::other)?;
@@ -241,7 +265,7 @@ impl crate::StoreFile for HttpStoreFile {
     ) -> std::io::Result<Self::FileReader> {
         let res = self
             .client
-            .get(&self.url)
+            .get(self.url.clone())
             .header(header::RANGE, RangeHeader(range).to_string())
             .send()
             .await
@@ -308,24 +332,19 @@ impl HttpStoreEntry {
     fn new(
         client: Arc<Client>,
         parser: parser::Parser,
-        parent: &str,
+        parent: Url,
         entry: String,
     ) -> Result<Self> {
+        let url = parent
+            .join(&entry)
+            .map_err(|err| Error::new(ErrorKind::InvalidData, err))?;
         Ok(if entry.ends_with('/') {
-            let url = PathBuf::from(parent)
-                .join(entry.trim_end_matches('/'))
-                .to_string_lossy()
-                .to_string();
             Self::Directory(HttpStoreDirectory {
                 parser,
                 client,
                 url,
             })
         } else {
-            let url = PathBuf::from(parent)
-                .join(entry)
-                .to_string_lossy()
-                .to_string();
             Self::File(HttpStoreFile { client, url })
         })
     }
@@ -341,6 +360,34 @@ mod tests {
 
     use crate::{Store, StoreDirectory, StoreFile, StoreMetadata, http::HttpStore};
 
+    #[test_case::test_case("http://localhost", "/foo.txt", "http://localhost/foo.txt"; "root with simple path with prefix")]
+    #[test_case::test_case("http://localhost", "foo.txt", "http://localhost/foo.txt"; "root with simple path without prefix")]
+    #[test_case::test_case("http://localhost/", "foo.txt", "http://localhost/foo.txt"; "root with simple path with slash on base")]
+    #[test_case::test_case("http://localhost/", "/foo.txt", "http://localhost/foo.txt"; "root with simple path with slashes")]
+    #[test_case::test_case("http://localhost/foo", "/bar/baz.txt", "http://localhost/foo/bar/baz.txt"; "with more children")]
+    #[test_case::test_case("http://localhost/foo", "/bar/with space.txt", "http://localhost/foo/bar/with%20space.txt"; "with spaces")]
+    fn building_path(base_url: &str, path: &str, expected: &str) {
+        let store = HttpStore::new(base_url).unwrap();
+        assert_eq!(
+            store.get_path(path).unwrap(),
+            reqwest::Url::parse(expected).unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn file_should_handle_base_with_ending_slash() {
+        let mut srv = mockito::Server::new_async().await;
+        let mock = srv
+            .mock("HEAD", "/foo/not-found.txt")
+            .with_status(404)
+            .create_async()
+            .await;
+        let store = HttpStore::new(format!("{}/foo/", srv.url())).unwrap();
+        let file = store.get_file("/not-found.txt").await.unwrap();
+        assert!(!file.exists().await.unwrap());
+        mock.assert_async().await;
+    }
+
     #[tokio::test]
     async fn file_should_check_if_file_exists() {
         let mut srv = mockito::Server::new_async().await;
@@ -349,10 +396,28 @@ mod tests {
             .with_status(404)
             .create_async()
             .await;
-        let store = HttpStore::new(srv.url());
+        let store = HttpStore::new(srv.url()).unwrap();
         let file = store.get_file("/not-found.txt").await.unwrap();
         assert!(!file.exists().await.unwrap());
         mock.assert_async().await;
+    }
+
+    #[tokio::test]
+    async fn file_should_get_filename() {
+        let srv = mockito::Server::new_async().await;
+        let store = HttpStore::new(srv.url()).unwrap();
+        let file = store.get_file("/test/file.txt").await.unwrap();
+        let name = file.filename().unwrap();
+        assert_eq!(name, "file.txt");
+    }
+
+    #[tokio::test]
+    async fn file_should_get_filename_with_space() {
+        let srv = mockito::Server::new_async().await;
+        let store = HttpStore::new(srv.url()).unwrap();
+        let file = store.get_file("/test/with%20space.txt").await.unwrap();
+        let name = file.filename().unwrap();
+        assert_eq!(name, "with space.txt");
     }
 
     #[tokio::test]
@@ -365,7 +430,7 @@ mod tests {
             .with_header(LAST_MODIFIED, "Thu, 01 May 2025 09:57:28 GMT")
             .create_async()
             .await;
-        let store = HttpStore::new(srv.url());
+        let store = HttpStore::new(srv.url()).unwrap();
         let file = store.get_file("/test/file.txt").await.unwrap();
         let meta = file.metadata().await.unwrap();
         assert_eq!(meta.size, 1234);
@@ -383,7 +448,7 @@ mod tests {
             .with_header("Content-Type", "application/octet-stream")
             .with_body("Hello, world!")
             .create();
-        let store = HttpStore::new(srv.url());
+        let store = HttpStore::new(srv.url()).unwrap();
         let file = store.get_file("/test/file").await.unwrap();
 
         let reader = file.read(0..5).await.unwrap();
@@ -407,7 +472,7 @@ mod tests {
             .with_body("Hello, world!")
             .create();
 
-        let store = HttpStore::new(srv.url());
+        let store = HttpStore::new(srv.url()).unwrap();
         let file = store.get_file("/test/file").await.unwrap();
 
         let reader = file.read(0..5).await.unwrap();
@@ -426,7 +491,7 @@ mod tests {
         let mut srv = mockito::Server::new_async().await;
         let _m = srv.mock("GET", "/test/file").with_status(404).create();
 
-        let store = HttpStore::new(srv.url());
+        let store = HttpStore::new(srv.url()).unwrap();
         let file = store.get_file("/test/file").await.unwrap();
 
         let result = file.read(0..5).await;
@@ -445,7 +510,7 @@ mod tests {
             .with_body(include_str!("../../assets/apache.html"))
             .create();
 
-        let store = HttpStore::new(srv.url());
+        let store = HttpStore::new(srv.url()).unwrap();
         let dir = store.get_dir("/NEH").await.unwrap();
         let mut content = dir.read().await.unwrap();
 

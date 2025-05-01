@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::Result;
 use std::ops::RangeBounds;
 use std::path::PathBuf;
@@ -31,6 +32,7 @@ pub trait StoreFile {
     type FileReader: StoreFileReader;
     type Metadata: StoreMetadata;
 
+    fn filename(&self) -> Option<Cow<'_, str>>;
     fn exists(&self) -> impl Future<Output = Result<bool>>;
     fn metadata(&self) -> impl Future<Output = Result<Self::Metadata>>;
     fn read<R: RangeBounds<u64>>(&self, range: R)
