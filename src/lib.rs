@@ -25,7 +25,7 @@ pub trait StoreDirectory {
     fn read(&self) -> impl Future<Output = Result<Self::Reader>>;
 }
 
-pub trait StoreDirectoryReader<E>: Stream<Item = Result<E>> {}
+pub trait StoreDirectoryReader<E>: Stream<Item = Result<E>> + Sized {}
 
 pub trait StoreFile {
     type FileReader: StoreFileReader;
