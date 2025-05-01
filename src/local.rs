@@ -1,10 +1,13 @@
+use std::io::{Error, ErrorKind};
 use std::ops::{Bound, RangeBounds};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::task::Poll;
 use std::{io::Result, pin::Pin};
 
-use crate::{Store, StoreFile, StoreFileReader};
+use futures::Stream;
+
+use crate::{Entry, Store, StoreDirectory, StoreFile, StoreFileReader};
 
 #[derive(Debug)]
 struct InnerLocalStore {
@@ -21,13 +24,84 @@ impl From<PathBuf> for LocalStore {
 }
 
 impl Store for LocalStore {
+    type Directory = LocalStoreDirectory;
     type File = LocalStoreFile;
+
+    async fn get_dir<P: Into<PathBuf>>(&self, path: P) -> Result<Self::Directory> {
+        let path = path.into();
+        crate::util::merge_path(&self.0.root, &path).map(|path| LocalStoreDirectory { path })
+    }
 
     async fn get_file<P: Into<PathBuf>>(&self, path: P) -> Result<Self::File> {
         let path = path.into();
         crate::util::merge_path(&self.0.root, &path).map(|path| LocalStoreFile { path })
     }
 }
+
+pub type LocalStoreEntry = Entry<LocalStoreFile, LocalStoreDirectory>;
+
+impl LocalStoreEntry {
+    pub fn new(entry: tokio::fs::DirEntry) -> Result<Self> {
+        let path = entry.path();
+        if path.is_dir() {
+            Ok(Self::Directory(LocalStoreDirectory { path }))
+        } else if path.is_file() {
+            Ok(Self::File(LocalStoreFile { path }))
+        } else {
+            Err(Error::new(
+                ErrorKind::Unsupported,
+                "expected a file or a directory",
+            ))
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct LocalStoreDirectory {
+    path: PathBuf,
+}
+
+impl StoreDirectory for LocalStoreDirectory {
+    type Entry = LocalStoreEntry;
+    type Reader = LocalStoreDirectoryReader;
+
+    async fn exists(&self) -> Result<bool> {
+        tokio::fs::try_exists(&self.path).await
+    }
+
+    async fn read(&self) -> Result<Self::Reader> {
+        tokio::fs::read_dir(&self.path)
+            .await
+            .map(|value| LocalStoreDirectoryReader {
+                inner: Box::pin(value),
+            })
+    }
+}
+
+#[derive(Debug)]
+pub struct LocalStoreDirectoryReader {
+    inner: Pin<Box<tokio::fs::ReadDir>>,
+}
+
+impl Stream for LocalStoreDirectoryReader {
+    type Item = Result<LocalStoreEntry>;
+
+    fn poll_next(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        let mut inner = self.get_mut().inner.as_mut();
+
+        match inner.poll_next_entry(cx) {
+            Poll::Ready(Ok(Some(entry))) => Poll::Ready(Some(LocalStoreEntry::new(entry))),
+            Poll::Ready(Ok(None)) => Poll::Ready(None),
+            Poll::Ready(Err(e)) => Poll::Ready(Some(Err(e))),
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
+impl crate::StoreDirectoryReader<LocalStoreEntry> for LocalStoreDirectoryReader {}
 
 #[derive(Debug)]
 pub struct LocalStoreFile {

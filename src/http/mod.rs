@@ -9,7 +9,9 @@ use std::{
 
 use bytes::Bytes;
 use futures::{Stream, StreamExt};
-use reqwest::{StatusCode, header};
+use reqwest::{Client, StatusCode, header};
+
+mod parser;
 
 fn error_from_status(code: StatusCode) -> Result<StatusCode> {
     if code.is_server_error() {
@@ -54,6 +56,7 @@ impl<R: RangeBounds<u64>> std::fmt::Display for RangeHeader<R> {
 
 struct InnerHttpStore {
     base_url: String,
+    parser: parser::Parser,
     client: Arc<reqwest::Client>,
 }
 
@@ -63,15 +66,17 @@ impl HttpStore {
     pub fn new(base_url: impl Into<String>) -> Self {
         Self(Arc::new(InnerHttpStore {
             base_url: base_url.into(),
+            parser: parser::Parser::default(),
             client: Arc::new(reqwest::Client::new()),
         }))
     }
 }
 
 impl crate::Store for HttpStore {
+    type Directory = HttpStoreDirectory;
     type File = HttpStoreFile;
 
-    async fn get_file<P: Into<std::path::PathBuf>>(&self, path: P) -> std::io::Result<Self::File> {
+    async fn get_file<P: Into<std::path::PathBuf>>(&self, path: P) -> Result<Self::File> {
         let path = path.into();
         let relative = crate::util::merge_path(&PathBuf::from("/"), &path)?;
         let url = format!("{}{}", self.0.base_url, relative.to_string_lossy());
@@ -80,23 +85,125 @@ impl crate::Store for HttpStore {
             url,
         })
     }
+
+    async fn get_dir<P: Into<PathBuf>>(&self, path: P) -> Result<Self::Directory> {
+        let path = path.into();
+        let relative = crate::util::merge_path(&PathBuf::from("/"), &path)?;
+        let url = format!("{}{}", self.0.base_url, relative.to_string_lossy());
+        Ok(HttpStoreDirectory {
+            parser: self.0.parser.clone(),
+            client: self.0.client.clone(),
+            url,
+        })
+    }
 }
+
+pub struct HttpStoreDirectory {
+    parser: parser::Parser,
+    client: Arc<reqwest::Client>,
+    url: String,
+}
+
+impl std::fmt::Debug for HttpStoreDirectory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct(stringify!(HttpStoreDirectory))
+            .field("url", &self.url)
+            .finish_non_exhaustive()
+    }
+}
+
+impl crate::StoreDirectory for HttpStoreDirectory {
+    type Entry = HttpStoreEntry;
+    type Reader = HttpStoreDirectoryReader;
+
+    async fn exists(&self) -> Result<bool> {
+        match self.client.head(&self.url).send().await {
+            Ok(res) => match res.status() {
+                StatusCode::NOT_FOUND => Ok(false),
+                other => error_from_status(other).map(|_| true),
+            },
+            Err(err) => Err(Error::other(err)),
+        }
+    }
+
+    async fn read(&self) -> Result<Self::Reader> {
+        let res = self
+            .client
+            .get(&self.url)
+            .send()
+            .await
+            .map_err(Error::other)?;
+        error_from_status(res.status())?;
+        let html = res.text().await.map_err(Error::other)?;
+        let mut entries = self.parser.parse(&html).collect::<Vec<_>>();
+        entries.reverse();
+
+        Ok(HttpStoreDirectoryReader {
+            client: self.client.clone(),
+            parser: self.parser.clone(),
+            url: self.url.clone(),
+            entries,
+        })
+    }
+}
+
+pub struct HttpStoreDirectoryReader {
+    client: Arc<reqwest::Client>,
+    parser: parser::Parser,
+    url: String,
+    entries: Vec<String>,
+}
+
+impl Stream for HttpStoreDirectoryReader {
+    type Item = Result<HttpStoreEntry>;
+
+    fn poll_next(
+        mut self: Pin<&mut Self>,
+        _cx: &mut std::task::Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        let mut this = self.as_mut();
+
+        if let Some(entry) = this.entries.pop() {
+            Poll::Ready(Some(HttpStoreEntry::new(
+                self.client.clone(),
+                self.parser.clone(),
+                &self.url,
+                entry,
+            )))
+        } else {
+            Poll::Ready(None)
+        }
+    }
+}
+
+impl crate::StoreDirectoryReader<HttpStoreEntry> for HttpStoreDirectoryReader {}
 
 pub struct HttpStoreFile {
     client: Arc<reqwest::Client>,
     url: String,
 }
 
+impl std::fmt::Debug for HttpStoreFile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct(stringify!(HttpStoreFile))
+            .field("url", &self.url)
+            .finish_non_exhaustive()
+    }
+}
+
 impl crate::StoreFile for HttpStoreFile {
     type FileReader = HttpStoreFileReader;
 
-    async fn exists(&self) -> std::io::Result<bool> {
-        match self.client.head(&self.url).send().await {
-            Ok(res) => match res.status() {
-                StatusCode::NOT_FOUND => Ok(false),
-                other => error_from_status(other).map(|_| true),
-            },
-            Err(err) => Err(std::io::Error::other(err)),
+    async fn exists(&self) -> Result<bool> {
+        let res = self
+            .client
+            .head(&self.url)
+            .send()
+            .await
+            .map_err(Error::other)?;
+        match res.status() {
+            StatusCode::NOT_FOUND => Ok(false),
+            other => error_from_status(other).map(|_| true),
         }
     }
 
@@ -110,7 +217,7 @@ impl crate::StoreFile for HttpStoreFile {
             .header(header::RANGE, RangeHeader(range).to_string())
             .send()
             .await
-            .map_err(std::io::Error::other)?;
+            .map_err(Error::other)?;
         error_from_status(res.status())?;
         // TODO handle when status code is not 206
         let stream = res.bytes_stream().boxed();
@@ -148,16 +255,46 @@ impl tokio::io::AsyncRead for HttpStoreFileReader {
 
 impl crate::StoreFileReader for HttpStoreFileReader {}
 
+pub type HttpStoreEntry = crate::Entry<HttpStoreFile, HttpStoreDirectory>;
+
+impl HttpStoreEntry {
+    fn new(
+        client: Arc<Client>,
+        parser: parser::Parser,
+        parent: &str,
+        entry: String,
+    ) -> Result<Self> {
+        Ok(if entry.ends_with('/') {
+            let url = PathBuf::from(parent)
+                .join(entry.trim_end_matches('/'))
+                .to_string_lossy()
+                .to_string();
+            Self::Directory(HttpStoreDirectory {
+                parser,
+                client,
+                url,
+            })
+        } else {
+            let url = PathBuf::from(parent)
+                .join(entry)
+                .to_string_lossy()
+                .to_string();
+            Self::File(HttpStoreFile { client, url })
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::ErrorKind;
 
+    use futures::StreamExt;
     use tokio::io::AsyncReadExt;
 
-    use crate::{Store, StoreFile, http::HttpStore};
+    use crate::{Store, StoreDirectory, StoreFile, http::HttpStore};
 
     #[tokio::test]
-    async fn should_check_if_file_exists() {
+    async fn file_should_check_if_file_exists() {
         let mut srv = mockito::Server::new_async().await;
         let mock = srv
             .mock("HEAD", "/not-found.txt")
@@ -169,8 +306,9 @@ mod tests {
         assert!(!file.exists().await.unwrap());
         mock.assert_async().await;
     }
+
     #[tokio::test]
-    async fn test_http_store_file_reader_read() {
+    async fn file_reader_should_read_entire_file() {
         let mut srv = mockito::Server::new_async().await;
         let _m = srv
             .mock("GET", "/test/file")
@@ -192,7 +330,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_http_store_file_reader_range_request() {
+    async fn file_reader_should_read_single_range() {
         let mut srv = mockito::Server::new_async().await;
         let _m = srv
             .mock("GET", "/test/file")
@@ -217,7 +355,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_http_store_file_reader_not_found() {
+    async fn file_reader_should_fail_with_not_found() {
         let mut srv = mockito::Server::new_async().await;
         let _m = srv.mock("GET", "/test/file").with_status(404).create();
 
@@ -229,5 +367,28 @@ mod tests {
             Ok(_) => panic!("should fail"),
             Err(err) => assert_eq!(err.kind(), ErrorKind::NotFound),
         }
+    }
+
+    #[tokio::test]
+    async fn dir_should_list_entries() {
+        let mut srv = mockito::Server::new_async().await;
+        let _m = srv
+            .mock("GET", "/NEH")
+            .with_status(200)
+            .with_body(include_str!("../../assets/apache.html"))
+            .create();
+
+        let store = HttpStore::new(srv.url());
+        let dir = store.get_dir("/NEH").await.unwrap();
+        let mut content = dir.read().await.unwrap();
+
+        let mut result = Vec::new();
+        while let Some(entry) = content.next().await {
+            result.push(entry.unwrap());
+        }
+        assert_eq!(result.len(), 46);
+
+        assert_eq!(result.iter().filter(|item| item.is_directory()).count(), 41);
+        assert_eq!(result.iter().filter(|item| item.is_file()).count(), 5);
     }
 }

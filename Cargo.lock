@@ -33,6 +33,8 @@ dependencies = [
  "bytes",
  "futures",
  "mockito",
+ "percent-encoding",
+ "regex",
  "reqwest",
  "tokio",
 ]
