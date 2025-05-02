@@ -10,7 +10,7 @@ use bytes::Bytes;
 use futures::{Stream, StreamExt};
 use percent_encoding::percent_decode_str;
 use reqwest::header::{CONTENT_LENGTH, LAST_MODIFIED};
-use reqwest::{Client, StatusCode, Url, header};
+use reqwest::{StatusCode, Url, header};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc2822;
 
@@ -60,7 +60,7 @@ impl<R: RangeBounds<u64>> std::fmt::Display for RangeHeader<R> {
 struct InnerHttpStore {
     base_url: Url,
     parser: parser::Parser,
-    client: Arc<reqwest::Client>,
+    client: reqwest::Client,
 }
 
 pub struct HttpStore(Arc<InnerHttpStore>);
@@ -72,7 +72,7 @@ impl HttpStore {
         Ok(Self(Arc::new(InnerHttpStore {
             base_url: base_url.into(),
             parser: parser::Parser::default(),
-            client: Arc::new(reqwest::Client::new()),
+            client: reqwest::Client::new(),
         })))
     }
 
@@ -100,23 +100,21 @@ impl crate::Store for HttpStore {
 
     async fn get_file<P: Into<std::path::PathBuf>>(&self, path: P) -> Result<Self::File> {
         Ok(HttpStoreFile {
-            client: self.0.client.clone(),
+            store: self.0.clone(),
             url: self.get_path(path)?,
         })
     }
 
     async fn get_dir<P: Into<PathBuf>>(&self, path: P) -> Result<Self::Directory> {
         Ok(HttpStoreDirectory {
-            parser: self.0.parser.clone(),
-            client: self.0.client.clone(),
+            store: self.0.clone(),
             url: self.get_path(path)?,
         })
     }
 }
 
 pub struct HttpStoreDirectory {
-    parser: parser::Parser,
-    client: Arc<reqwest::Client>,
+    store: Arc<InnerHttpStore>,
     url: Url,
 }
 
@@ -133,7 +131,7 @@ impl crate::StoreDirectory for HttpStoreDirectory {
     type Reader = HttpStoreDirectoryReader;
 
     async fn exists(&self) -> Result<bool> {
-        match self.client.head(self.url.clone()).send().await {
+        match self.store.client.head(self.url.clone()).send().await {
             Ok(res) => match res.status() {
                 StatusCode::NOT_FOUND => Ok(false),
                 other => error_from_status(other).map(|_| true),
@@ -144,6 +142,7 @@ impl crate::StoreDirectory for HttpStoreDirectory {
 
     async fn read(&self) -> Result<Self::Reader> {
         let res = self
+            .store
             .client
             .get(self.url.clone())
             .send()
@@ -151,12 +150,11 @@ impl crate::StoreDirectory for HttpStoreDirectory {
             .map_err(Error::other)?;
         error_from_status(res.status())?;
         let html = res.text().await.map_err(Error::other)?;
-        let mut entries = self.parser.parse(&html).collect::<Vec<_>>();
+        let mut entries = self.store.parser.parse(&html).collect::<Vec<_>>();
         entries.reverse();
 
         Ok(HttpStoreDirectoryReader {
-            client: self.client.clone(),
-            parser: self.parser.clone(),
+            store: self.store.clone(),
             url: self.url.clone(),
             entries,
         })
@@ -164,8 +162,7 @@ impl crate::StoreDirectory for HttpStoreDirectory {
 }
 
 pub struct HttpStoreDirectoryReader {
-    client: Arc<reqwest::Client>,
-    parser: parser::Parser,
+    store: Arc<InnerHttpStore>,
     url: Url,
     entries: Vec<String>,
 }
@@ -181,8 +178,7 @@ impl Stream for HttpStoreDirectoryReader {
 
         if let Some(entry) = this.entries.pop() {
             Poll::Ready(Some(HttpStoreEntry::new(
-                self.client.clone(),
-                self.parser.clone(),
+                self.store.clone(),
                 self.url.clone(),
                 entry,
             )))
@@ -195,7 +191,7 @@ impl Stream for HttpStoreDirectoryReader {
 impl crate::StoreDirectoryReader<HttpStoreEntry> for HttpStoreDirectoryReader {}
 
 pub struct HttpStoreFile {
-    client: Arc<reqwest::Client>,
+    store: Arc<InnerHttpStore>,
     url: Url,
 }
 
@@ -221,6 +217,7 @@ impl crate::StoreFile for HttpStoreFile {
 
     async fn exists(&self) -> Result<bool> {
         let res = self
+            .store
             .client
             .head(self.url.clone())
             .send()
@@ -234,6 +231,7 @@ impl crate::StoreFile for HttpStoreFile {
 
     async fn metadata(&self) -> Result<Self::Metadata> {
         let res = self
+            .store
             .client
             .head(self.url.clone())
             .send()
@@ -261,6 +259,7 @@ impl crate::StoreFile for HttpStoreFile {
         range: R,
     ) -> std::io::Result<Self::FileReader> {
         let res = self
+            .store
             .client
             .get(self.url.clone())
             .header(header::RANGE, RangeHeader(range).to_string())
@@ -326,23 +325,14 @@ impl crate::StoreFileReader for HttpStoreFileReader {}
 pub type HttpStoreEntry = crate::Entry<HttpStoreFile, HttpStoreDirectory>;
 
 impl HttpStoreEntry {
-    fn new(
-        client: Arc<Client>,
-        parser: parser::Parser,
-        parent: Url,
-        entry: String,
-    ) -> Result<Self> {
+    fn new(store: Arc<InnerHttpStore>, parent: Url, entry: String) -> Result<Self> {
         let url = parent
             .join(&entry)
             .map_err(|err| Error::new(ErrorKind::InvalidData, err))?;
         Ok(if entry.ends_with('/') {
-            Self::Directory(HttpStoreDirectory {
-                parser,
-                client,
-                url,
-            })
+            Self::Directory(HttpStoreDirectory { store, url })
         } else {
-            Self::File(HttpStoreFile { client, url })
+            Self::File(HttpStoreFile { store, url })
         })
     }
 }

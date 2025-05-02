@@ -1,15 +1,11 @@
-use std::sync::Arc;
-
 use percent_encoding::percent_decode_str;
 
 #[derive(Clone, Debug)]
-pub(super) struct Parser(Arc<regex::Regex>);
+pub(super) struct Parser(regex::Regex);
 
 impl Default for Parser {
     fn default() -> Self {
-        Self(Arc::new(
-            regex::Regex::new(r#"<a(?:.*)? href="([^"]+)"(?:.*)?>"#).unwrap(),
-        ))
+        Self(regex::Regex::new(r#"<a(?:.*)? href="([^"]+)"(?:.*)?>"#).unwrap())
     }
 }
 
