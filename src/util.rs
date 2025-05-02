@@ -2,8 +2,13 @@ use std::io::{Error, ErrorKind, Result};
 use std::path::{Component, Path, PathBuf};
 
 pub fn merge_path(root: &Path, child: &Path) -> Result<PathBuf> {
-    let mut res = Vec::with_capacity(child.components().count());
-    for item in child.components() {
+    let clean = clean_path(child)?;
+    Ok(root.join(clean))
+}
+
+pub fn clean_path(path: &Path) -> Result<PathBuf> {
+    let mut res = PathBuf::new();
+    for item in path.components() {
         match item {
             Component::CurDir | Component::RootDir => {}
             Component::Prefix(_prefix) => {
@@ -13,13 +18,11 @@ pub fn merge_path(root: &Path, child: &Path) -> Result<PathBuf> {
                 res.push(inner);
             }
             Component::ParentDir => {
-                if res.pop().is_none() {
+                if !res.pop() {
                     return Err(Error::new(ErrorKind::NotFound, "No such file or directory"));
                 }
             }
         }
     }
-    Ok(res
-        .into_iter()
-        .fold(root.to_path_buf(), |acc, name| acc.join(name)))
+    Ok(res)
 }
