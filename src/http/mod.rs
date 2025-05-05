@@ -15,6 +15,8 @@ use time::format_description::well_known::Rfc2822;
 
 mod parser;
 
+/// Converts an HTTP status code into a `Result`, returning an `io::Error`
+/// for client or server errors, and `Ok(code)` otherwise.
 pub(crate) fn error_from_status(code: StatusCode) -> Result<StatusCode> {
     if code.is_server_error() {
         Err(Error::other(
@@ -33,9 +35,11 @@ pub(crate) fn error_from_status(code: StatusCode) -> Result<StatusCode> {
     }
 }
 
+/// Helper struct to format HTTP Range headers from a `RangeBounds<u64>`.
 pub(crate) struct RangeHeader<R: RangeBounds<u64>>(pub R);
 
 impl<R: RangeBounds<u64>> std::fmt::Display for RangeHeader<R> {
+    /// Formats the HTTP `Range` header value (e.g., "bytes=0-100").
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("bytes=")?;
         match self.0.start_bound() {
@@ -56,6 +60,7 @@ impl<R: RangeBounds<u64>> std::fmt::Display for RangeHeader<R> {
     }
 }
 
+/// Internal representation of the HTTP-backed store.
 struct InnerHttpStore {
     base_url: Url,
     parser: parser::Parser,
@@ -63,6 +68,7 @@ struct InnerHttpStore {
 }
 
 impl InnerHttpStore {
+    /// Resolves a relative file or directory path into a full URL.
     fn get_url(&self, path: &Path) -> Result<Url> {
         let clean = crate::util::clean_path(path)?;
         self.base_url
@@ -71,6 +77,7 @@ impl InnerHttpStore {
     }
 }
 
+/// Public HTTP-backed file store supporting asynchronous access to remote files and directories.
 #[derive(Clone)]
 pub struct HttpStore(Arc<InnerHttpStore>);
 
@@ -83,6 +90,9 @@ impl std::fmt::Debug for HttpStore {
 }
 
 impl HttpStore {
+    /// Creates a new `HttpStore` from a base URL.
+    ///
+    /// Ensures the base URL ends with a trailing slash and initializes the HTTP client and parser.
     pub fn new(base_url: impl AsRef<str>) -> Result<Self> {
         let base_url = base_url.as_ref();
         let base_url = if base_url.ends_with("/") {
@@ -104,6 +114,7 @@ impl crate::Store for HttpStore {
     type Directory = HttpStoreDirectory;
     type File = HttpStoreFile;
 
+    /// Retrieves a file from the HTTP store at the given path.
     async fn get_file<P: Into<std::path::PathBuf>>(&self, path: P) -> Result<Self::File> {
         Ok(HttpStoreFile {
             store: self.0.clone(),
@@ -111,6 +122,7 @@ impl crate::Store for HttpStore {
         })
     }
 
+    /// Retrieves a directory from the HTTP store at the given path.
     async fn get_dir<P: Into<PathBuf>>(&self, path: P) -> Result<Self::Directory> {
         Ok(HttpStoreDirectory {
             store: self.0.clone(),
@@ -119,6 +131,7 @@ impl crate::Store for HttpStore {
     }
 }
 
+/// Representation of a directory in the HTTP store.
 pub struct HttpStoreDirectory {
     store: Arc<InnerHttpStore>,
     path: PathBuf,
@@ -136,6 +149,7 @@ impl crate::StoreDirectory for HttpStoreDirectory {
     type Entry = HttpStoreEntry;
     type Reader = HttpStoreDirectoryReader;
 
+    /// Checks if the HTTP directory exists via a HEAD request.
     async fn exists(&self) -> Result<bool> {
         let url = self.store.get_url(&self.path)?;
         match self.store.client.head(url).send().await {
@@ -147,6 +161,7 @@ impl crate::StoreDirectory for HttpStoreDirectory {
         }
     }
 
+    /// Lists the entries in the HTTP directory by fetching and parsing HTML.
     async fn read(&self) -> Result<Self::Reader> {
         let url = self.store.get_url(&self.path)?;
         let res = self
@@ -169,6 +184,7 @@ impl crate::StoreDirectory for HttpStoreDirectory {
     }
 }
 
+/// Stream reader over entries within an HTTP directory listing.
 pub struct HttpStoreDirectoryReader {
     store: Arc<InnerHttpStore>,
     path: PathBuf,
@@ -178,6 +194,7 @@ pub struct HttpStoreDirectoryReader {
 impl Stream for HttpStoreDirectoryReader {
     type Item = Result<HttpStoreEntry>;
 
+    /// Returns the next directory entry from the parsed HTML listing.
     fn poll_next(
         mut self: Pin<&mut Self>,
         _cx: &mut std::task::Context<'_>,
@@ -198,6 +215,7 @@ impl Stream for HttpStoreDirectoryReader {
 
 impl crate::StoreDirectoryReader<HttpStoreEntry> for HttpStoreDirectoryReader {}
 
+/// Representation of a file in the HTTP store.
 pub struct HttpStoreFile {
     store: Arc<InnerHttpStore>,
     path: PathBuf,
@@ -215,11 +233,13 @@ impl crate::StoreFile for HttpStoreFile {
     type FileReader = HttpStoreFileReader;
     type Metadata = HttpStoreFileMetadata;
 
+    /// Returns the filename portion of the HTTP path.
     fn filename(&self) -> Option<Cow<'_, str>> {
         let cmp = self.path.components().last()?;
         Some(cmp.as_os_str().to_string_lossy())
     }
 
+    /// Checks if the HTTP file exists via a HEAD request.
     async fn exists(&self) -> Result<bool> {
         let url = self.store.get_url(&self.path)?;
         let res = self
@@ -235,6 +255,7 @@ impl crate::StoreFile for HttpStoreFile {
         }
     }
 
+    /// Retrieves the HTTP file metadata (size and last modified).
     async fn metadata(&self) -> Result<Self::Metadata> {
         let url = self.store.get_url(&self.path)?;
         let res = self
@@ -261,6 +282,7 @@ impl crate::StoreFile for HttpStoreFile {
         Ok(HttpStoreFileMetadata { size, modified })
     }
 
+    /// Begins reading a file from the HTTP store for the given byte range.
     async fn read<R: std::ops::RangeBounds<u64>>(&self, range: R) -> Result<Self::FileReader> {
         let url = self.store.get_url(&self.path)?;
         let res = self
@@ -275,30 +297,38 @@ impl crate::StoreFile for HttpStoreFile {
     }
 }
 
+/// Metadata for an HTTP file, containing size and last modification time.
 pub struct HttpStoreFileMetadata {
     size: u64,
     modified: u64,
 }
 
 impl super::StoreMetadata for HttpStoreFileMetadata {
+    /// Returns the file size in bytes.
     fn size(&self) -> u64 {
         self.size
     }
 
+    /// Returns 0 as creation time is not available over HTTP.
     fn created(&self) -> u64 {
         0
     }
 
+    /// Returns the last modified time (as a UNIX timestamp).
     fn modified(&self) -> u64 {
         self.modified
     }
 }
 
+/// Reader for streaming bytes from a remote HTTP file.
 pub struct HttpStoreFileReader {
     stream: Pin<Box<dyn Stream<Item = reqwest::Result<Bytes>> + std::marker::Send>>,
 }
 
 impl HttpStoreFileReader {
+    /// Creates a `HttpStoreFileReader` from a `reqwest::Response`.
+    ///
+    /// Validates the response and initializes the byte stream.
     pub(crate) fn from_response(res: reqwest::Response) -> Result<Self> {
         crate::http::error_from_status(res.status())?;
         // TODO handle when status code is not 206
@@ -308,6 +338,9 @@ impl HttpStoreFileReader {
 }
 
 impl tokio::io::AsyncRead for HttpStoreFileReader {
+    /// Polls the next chunk of data from the HTTP byte stream.
+    ///
+    /// Copies bytes into the provided buffer.
     fn poll_read(
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
@@ -333,9 +366,13 @@ impl tokio::io::AsyncRead for HttpStoreFileReader {
 
 impl crate::StoreFileReader for HttpStoreFileReader {}
 
+/// Represents an entry in the HTTP store (file or directory).
 pub type HttpStoreEntry = crate::Entry<HttpStoreFile, HttpStoreDirectory>;
 
 impl HttpStoreEntry {
+    /// Constructs a new `HttpStoreEntry` (either file or directory) from a path component.
+    ///
+    /// Assumes directory entries end with a `/`.
     fn new(store: Arc<InnerHttpStore>, parent: PathBuf, entry: String) -> Result<Self> {
         let path = parent.join(&entry);
         Ok(if entry.ends_with('/') {
