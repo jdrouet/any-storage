@@ -12,12 +12,14 @@ use reqwest::header;
 
 use crate::http::{HttpStoreFileReader, RangeHeader};
 
+/// Stores username and password credentials for authentication.
 pub struct Credentials {
     username: Box<str>,
     password: Box<str>,
 }
 
 impl std::fmt::Debug for Credentials {
+    /// Omits the password field from debug output for security.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct(stringify!(Credentials))
             .field("username", &self.username)
@@ -26,6 +28,7 @@ impl std::fmt::Debug for Credentials {
     }
 }
 
+/// A store backed by the pCloud remote storage service.
 pub struct PCloudStore(Arc<pcloud::Client>);
 
 impl std::fmt::Debug for PCloudStore {
@@ -38,6 +41,7 @@ impl std::fmt::Debug for PCloudStore {
 static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 impl PCloudStore {
+    /// Creates a new `PCloudStore` using a base URL and login credentials.
     pub fn new(base_url: impl Into<Cow<'static, str>>, credentials: Credentials) -> Result<Self> {
         let client = pcloud::Client::builder()
             .with_base_url(base_url)
@@ -55,6 +59,7 @@ impl crate::Store for PCloudStore {
     type Directory = PCloudStoreDirectory;
     type File = PCloudStoreFile;
 
+    /// Retrieves a file handle for the given path in the pCloud store.
     async fn get_file<P: Into<PathBuf>>(&self, path: P) -> Result<Self::File> {
         Ok(PCloudStoreFile {
             store: self.0.clone(),
@@ -62,6 +67,7 @@ impl crate::Store for PCloudStore {
         })
     }
 
+    /// Retrieves a directory handle for the given path in the pCloud store.
     async fn get_dir<P: Into<PathBuf>>(&self, path: P) -> Result<Self::Directory> {
         Ok(PCloudStoreDirectory {
             store: self.0.clone(),
@@ -72,6 +78,7 @@ impl crate::Store for PCloudStore {
 
 // directory
 
+/// A directory in the pCloud file store.
 pub struct PCloudStoreDirectory {
     store: Arc<pcloud::Client>,
     path: PathBuf,
@@ -89,6 +96,7 @@ impl crate::StoreDirectory for PCloudStoreDirectory {
     type Entry = PCloudStoreEntry;
     type Reader = PCloudStoreDirectoryReader;
 
+    /// Checks if the directory exists on pCloud.
     async fn exists(&self) -> Result<bool> {
         let identifier = FolderIdentifier::path(self.path.to_string_lossy());
         match self.store.list_folder(identifier).await {
@@ -98,6 +106,7 @@ impl crate::StoreDirectory for PCloudStoreDirectory {
         }
     }
 
+    /// Reads the directory contents from pCloud and returns an entry reader.
     async fn read(&self) -> Result<Self::Reader> {
         let identifier = FolderIdentifier::path(self.path.to_string_lossy());
         match self.store.list_folder(identifier).await {
@@ -114,6 +123,7 @@ impl crate::StoreDirectory for PCloudStoreDirectory {
     }
 }
 
+/// A streaming reader over entries in a pCloud directory.
 pub struct PCloudStoreDirectoryReader {
     store: Arc<pcloud::Client>,
     path: PathBuf,
@@ -123,6 +133,7 @@ pub struct PCloudStoreDirectoryReader {
 impl Stream for PCloudStoreDirectoryReader {
     type Item = Result<PCloudStoreEntry>;
 
+    /// Polls the next entry in the directory listing.
     fn poll_next(
         mut self: Pin<&mut Self>,
         _cx: &mut std::task::Context<'_>,
@@ -145,6 +156,7 @@ impl crate::StoreDirectoryReader<PCloudStoreEntry> for PCloudStoreDirectoryReade
 
 // files
 
+/// A file in the pCloud file store.
 pub struct PCloudStoreFile {
     store: Arc<pcloud::Client>,
     path: PathBuf,
@@ -162,11 +174,13 @@ impl crate::StoreFile for PCloudStoreFile {
     type FileReader = PCloudStoreFileReader;
     type Metadata = PCloudStoreFileMetadata;
 
+    /// Returns the filename portion of the file's path.
     fn filename(&self) -> Option<Cow<'_, str>> {
         let cmp = self.path.components().last()?;
         Some(cmp.as_os_str().to_string_lossy())
     }
 
+    /// Checks whether the file exists on pCloud.
     async fn exists(&self) -> Result<bool> {
         let identifier = FileIdentifier::path(self.path.to_string_lossy());
         match self.store.get_file_checksum(identifier).await {
@@ -176,6 +190,7 @@ impl crate::StoreFile for PCloudStoreFile {
         }
     }
 
+    /// Retrieves metadata about the file (size, creation, and modification times).
     async fn metadata(&self) -> Result<Self::Metadata> {
         let identifier = FileIdentifier::path(self.path.to_string_lossy());
         match self.store.get_file_checksum(identifier).await {
@@ -191,6 +206,7 @@ impl crate::StoreFile for PCloudStoreFile {
         }
     }
 
+    /// Reads a byte range of the file content using a download link from pCloud.
     async fn read<R: std::ops::RangeBounds<u64>>(&self, range: R) -> Result<Self::FileReader> {
         let identifier = FileIdentifier::path(self.path.to_string_lossy());
         let links = self
@@ -218,6 +234,7 @@ impl crate::StoreFile for PCloudStoreFile {
     }
 }
 
+/// Metadata for a file in the pCloud store.
 pub struct PCloudStoreFileMetadata {
     size: u64,
     created: u64,
@@ -225,24 +242,34 @@ pub struct PCloudStoreFileMetadata {
 }
 
 impl super::StoreMetadata for PCloudStoreFileMetadata {
+    /// Returns the file size in bytes.
     fn size(&self) -> u64 {
         self.size
     }
 
+    /// Returns the UNIX timestamp when the file was created.
     fn created(&self) -> u64 {
         self.created
     }
 
+    /// Returns the UNIX timestamp when the file was last modified.
     fn modified(&self) -> u64 {
         self.modified
     }
 }
 
+/// File reader type for pCloud files.
+///
+/// Reuses `HttpStoreFileReader` for actual byte streaming via HTTP.
 pub type PCloudStoreFileReader = HttpStoreFileReader;
 
+/// Represents a file or directory entry within the pCloud store.
 pub type PCloudStoreEntry = crate::Entry<PCloudStoreFile, PCloudStoreDirectory>;
 
 impl PCloudStoreEntry {
+    /// Constructs a `PCloudStoreEntry` from a parent path and a pCloud entry.
+    ///
+    /// Determines if the entry is a file or directory.
     fn new(
         store: Arc<pcloud::Client>,
         parent: PathBuf,
