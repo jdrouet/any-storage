@@ -37,7 +37,8 @@ impl Store for LocalStore {
 
     /// Retrieves a directory at the specified path in the local store.
     ///
-    /// Merges the root path with the given path to obtain the full directory path.
+    /// Merges the root path with the given path to obtain the full directory
+    /// path.
     async fn get_dir<P: Into<PathBuf>>(&self, path: P) -> Result<Self::Directory> {
         let path = path.into();
         crate::util::merge_path(&self.0.root, &path).map(|path| LocalStoreDirectory { path })
@@ -52,7 +53,8 @@ impl Store for LocalStore {
     }
 }
 
-/// Type alias for entries in the local store, which can be files or directories.
+/// Type alias for entries in the local store, which can be files or
+/// directories.
 pub type LocalStoreEntry = Entry<LocalStoreFile, LocalStoreDirectory>;
 
 impl LocalStoreEntry {
@@ -86,14 +88,16 @@ impl StoreDirectory for LocalStoreDirectory {
 
     /// Checks if the directory exists.
     ///
-    /// Returns a future that resolves to `true` if the directory exists, otherwise `false`.
+    /// Returns a future that resolves to `true` if the directory exists,
+    /// otherwise `false`.
     async fn exists(&self) -> Result<bool> {
         tokio::fs::try_exists(&self.path).await
     }
 
     /// Reads the contents of the directory.
     ///
-    /// Returns a future that resolves to a reader for iterating over the directory's entries.
+    /// Returns a future that resolves to a reader for iterating over the
+    /// directory's entries.
     async fn read(&self) -> Result<Self::Reader> {
         tokio::fs::read_dir(&self.path)
             .await
@@ -114,7 +118,8 @@ impl Stream for LocalStoreDirectoryReader {
 
     /// Polls for the next directory entry.
     ///
-    /// This function is used to asynchronously retrieve the next entry in the directory.
+    /// This function is used to asynchronously retrieve the next entry in the
+    /// directory.
     fn poll_next(
         self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
@@ -144,7 +149,8 @@ impl StoreFile for LocalStoreFile {
 
     /// Retrieves the file name from the path.
     ///
-    /// This function extracts the file name by iterating over the components of the path in reverse order.
+    /// This function extracts the file name by iterating over the components of
+    /// the path in reverse order.
     fn filename(&self) -> Option<Cow<'_, str>> {
         self.path
             .components()
@@ -159,14 +165,16 @@ impl StoreFile for LocalStoreFile {
 
     /// Checks if the file exists.
     ///
-    /// Returns a future that resolves to `true` if the file exists, otherwise `false`.
+    /// Returns a future that resolves to `true` if the file exists, otherwise
+    /// `false`.
     async fn exists(&self) -> Result<bool> {
         tokio::fs::try_exists(&self.path).await
     }
 
     /// Retrieves the metadata of the file.
     ///
-    /// Returns a future that resolves to the file's metadata, such as size and timestamps.
+    /// Returns a future that resolves to the file's metadata, such as size and
+    /// timestamps.
     async fn metadata(&self) -> Result<Self::Metadata> {
         let meta = tokio::fs::metadata(&self.path).await?;
         let size = meta.size();
@@ -191,7 +199,8 @@ impl StoreFile for LocalStoreFile {
 
     /// Reads a portion of the file's content, specified by a byte range.
     ///
-    /// Returns a future that resolves to a reader that can read the specified range of the file.
+    /// Returns a future that resolves to a reader that can read the specified
+    /// range of the file.
     async fn read<R: RangeBounds<u64>>(&self, range: R) -> Result<Self::FileReader> {
         use tokio::io::AsyncSeekExt;
 
@@ -221,7 +230,8 @@ impl StoreFile for LocalStoreFile {
     }
 }
 
-/// Metadata associated with a file in the local store (size, created, modified timestamps).
+/// Metadata associated with a file in the local store (size, created, modified
+/// timestamps).
 pub struct LocalStoreFileMetadata {
     size: u64,
     created: u64,
@@ -258,7 +268,8 @@ pub struct LocalStoreFileReader {
 impl tokio::io::AsyncRead for LocalStoreFileReader {
     /// Polls for reading data from the file.
     ///
-    /// This function reads data into the provided buffer, handling partial reads within the given range.
+    /// This function reads data into the provided buffer, handling partial
+    /// reads within the given range.
     fn poll_read(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,

@@ -190,7 +190,8 @@ impl crate::StoreFile for PCloudStoreFile {
         }
     }
 
-    /// Retrieves metadata about the file (size, creation, and modification times).
+    /// Retrieves metadata about the file (size, creation, and modification
+    /// times).
     async fn metadata(&self) -> Result<Self::Metadata> {
         let identifier = FileIdentifier::path(self.path.to_string_lossy());
         match self.store.get_file_checksum(identifier).await {
@@ -206,7 +207,8 @@ impl crate::StoreFile for PCloudStoreFile {
         }
     }
 
-    /// Reads a byte range of the file content using a download link from pCloud.
+    /// Reads a byte range of the file content using a download link from
+    /// pCloud.
     async fn read<R: std::ops::RangeBounds<u64>>(&self, range: R) -> Result<Self::FileReader> {
         let identifier = FileIdentifier::path(self.path.to_string_lossy());
         let links = self

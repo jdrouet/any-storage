@@ -33,12 +33,14 @@ pub trait Store {
 
     /// Retrieves a directory at the specified path.
     ///
-    /// This method returns a future that resolves to the directory at the given path.
+    /// This method returns a future that resolves to the directory at the given
+    /// path.
     fn get_dir<P: Into<PathBuf>>(&self, path: P) -> impl Future<Output = Result<Self::Directory>>;
 
     /// Retrieves a file at the specified path.
     ///
-    /// This method returns a future that resolves to the file at the given path.
+    /// This method returns a future that resolves to the file at the given
+    /// path.
     fn get_file<P: Into<PathBuf>>(&self, path: P) -> impl Future<Output = Result<Self::File>>;
 }
 
@@ -46,12 +48,14 @@ pub trait Store {
 pub trait StoreDirectory {
     /// Associated type for entries in the directory.
     type Entry;
-    /// Associated type for the reader that iterates over the directory's entries.
+    /// Associated type for the reader that iterates over the directory's
+    /// entries.
     type Reader: StoreDirectoryReader<Self::Entry>;
 
     /// Checks if the directory exists.
     ///
-    /// Returns a future that resolves to `true` if the directory exists, otherwise `false`.
+    /// Returns a future that resolves to `true` if the directory exists,
+    /// otherwise `false`.
     fn exists(&self) -> impl Future<Output = Result<bool>>;
 
     /// Reads the contents of the directory.
@@ -77,22 +81,26 @@ pub trait StoreFile {
 
     /// Checks if the file exists.
     ///
-    /// Returns a future that resolves to `true` if the file exists, otherwise `false`.
+    /// Returns a future that resolves to `true` if the file exists, otherwise
+    /// `false`.
     fn exists(&self) -> impl Future<Output = Result<bool>>;
 
     /// Retrieves the metadata of the file.
     ///
-    /// Returns a future that resolves to the file's metadata (size, creation time, etc.).
+    /// Returns a future that resolves to the file's metadata (size, creation
+    /// time, etc.).
     fn metadata(&self) -> impl Future<Output = Result<Self::Metadata>>;
 
     /// Reads a portion of the file's content, specified by a byte range.
     ///
-    /// Returns a future that resolves to a reader that can read the specified range of the file.
+    /// Returns a future that resolves to a reader that can read the specified
+    /// range of the file.
     fn read<R: RangeBounds<u64>>(&self, range: R)
     -> impl Future<Output = Result<Self::FileReader>>;
 }
 
-/// Trait representing a reader that can asynchronously read the contents of a file.
+/// Trait representing a reader that can asynchronously read the contents of a
+/// file.
 pub trait StoreFileReader: tokio::io::AsyncRead {}
 
 /// Enum representing either a file or a directory entry.
@@ -131,7 +139,8 @@ impl<File, Directory> Entry<File, Directory> {
         }
     }
 
-    /// Converts the entry into a directory, returning an error if it’s not a directory.
+    /// Converts the entry into a directory, returning an error if it’s not a
+    /// directory.
     pub fn into_directory(self) -> std::result::Result<Directory, Self> {
         match self {
             Self::Directory(inner) => Ok(inner),

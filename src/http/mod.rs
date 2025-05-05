@@ -77,7 +77,8 @@ impl InnerHttpStore {
     }
 }
 
-/// Public HTTP-backed file store supporting asynchronous access to remote files and directories.
+/// Public HTTP-backed file store supporting asynchronous access to remote files
+/// and directories.
 #[derive(Clone)]
 pub struct HttpStore(Arc<InnerHttpStore>);
 
@@ -92,7 +93,8 @@ impl std::fmt::Debug for HttpStore {
 impl HttpStore {
     /// Creates a new `HttpStore` from a base URL.
     ///
-    /// Ensures the base URL ends with a trailing slash and initializes the HTTP client and parser.
+    /// Ensures the base URL ends with a trailing slash and initializes the HTTP
+    /// client and parser.
     pub fn new(base_url: impl AsRef<str>) -> Result<Self> {
         let base_url = base_url.as_ref();
         let base_url = if base_url.ends_with("/") {
@@ -370,7 +372,8 @@ impl crate::StoreFileReader for HttpStoreFileReader {}
 pub type HttpStoreEntry = crate::Entry<HttpStoreFile, HttpStoreDirectory>;
 
 impl HttpStoreEntry {
-    /// Constructs a new `HttpStoreEntry` (either file or directory) from a path component.
+    /// Constructs a new `HttpStoreEntry` (either file or directory) from a path
+    /// component.
     ///
     /// Assumes directory entries end with a `/`.
     fn new(store: Arc<InnerHttpStore>, parent: PathBuf, entry: String) -> Result<Self> {
