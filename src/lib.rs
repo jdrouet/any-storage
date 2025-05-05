@@ -7,6 +7,7 @@ use futures::Stream;
 
 pub mod http;
 pub mod local;
+pub mod pcloud;
 
 pub(crate) mod util;
 

@@ -15,7 +15,7 @@ use time::format_description::well_known::Rfc2822;
 
 mod parser;
 
-fn error_from_status(code: StatusCode) -> Result<StatusCode> {
+pub(crate) fn error_from_status(code: StatusCode) -> Result<StatusCode> {
     if code.is_server_error() {
         Err(Error::other(
             code.canonical_reason().unwrap_or(code.as_str()),
@@ -33,7 +33,7 @@ fn error_from_status(code: StatusCode) -> Result<StatusCode> {
     }
 }
 
-struct RangeHeader<R: RangeBounds<u64>>(pub R);
+pub(crate) struct RangeHeader<R: RangeBounds<u64>>(pub R);
 
 impl<R: RangeBounds<u64>> std::fmt::Display for RangeHeader<R> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -271,10 +271,7 @@ impl crate::StoreFile for HttpStoreFile {
             .send()
             .await
             .map_err(Error::other)?;
-        error_from_status(res.status())?;
-        // TODO handle when status code is not 206
-        let stream = res.bytes_stream().boxed();
-        Ok(HttpStoreFileReader { stream })
+        HttpStoreFileReader::from_response(res)
     }
 }
 
@@ -299,6 +296,15 @@ impl super::StoreMetadata for HttpStoreFileMetadata {
 
 pub struct HttpStoreFileReader {
     stream: Pin<Box<dyn Stream<Item = reqwest::Result<Bytes>> + std::marker::Send>>,
+}
+
+impl HttpStoreFileReader {
+    pub(crate) fn from_response(res: reqwest::Response) -> Result<Self> {
+        crate::http::error_from_status(res.status())?;
+        // TODO handle when status code is not 206
+        let stream = res.bytes_stream().boxed();
+        Ok(Self { stream })
+    }
 }
 
 impl tokio::io::AsyncRead for HttpStoreFileReader {
