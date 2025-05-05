@@ -1,3 +1,5 @@
+#![doc = include_str!("../readme.md")]
+
 use std::borrow::Cow;
 use std::io::Result;
 use std::ops::RangeBounds;
