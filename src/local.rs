@@ -12,15 +12,20 @@ use futures::Stream;
 
 use crate::{Entry, Store, StoreDirectory, StoreFile, StoreFileReader};
 
+/// Internal representation of the local store with a root path.
 #[derive(Debug)]
 struct InnerLocalStore {
     root: PathBuf,
 }
 
+/// Wrapper for the local store, enabling shared ownership.
 #[derive(Debug, Clone)]
 pub struct LocalStore(Arc<InnerLocalStore>);
 
 impl From<PathBuf> for LocalStore {
+    /// Converts a `PathBuf` into a `LocalStore`.
+    ///
+    /// Takes the root path of the local store and wraps it in an `Arc`.
     fn from(value: PathBuf) -> Self {
         Self(Arc::new(InnerLocalStore { root: value }))
     }
@@ -30,20 +35,30 @@ impl Store for LocalStore {
     type Directory = LocalStoreDirectory;
     type File = LocalStoreFile;
 
+    /// Retrieves a directory at the specified path in the local store.
+    ///
+    /// Merges the root path with the given path to obtain the full directory path.
     async fn get_dir<P: Into<PathBuf>>(&self, path: P) -> Result<Self::Directory> {
         let path = path.into();
         crate::util::merge_path(&self.0.root, &path).map(|path| LocalStoreDirectory { path })
     }
 
+    /// Retrieves a file at the specified path in the local store.
+    ///
+    /// Merges the root path with the given path to obtain the full file path.
     async fn get_file<P: Into<PathBuf>>(&self, path: P) -> Result<Self::File> {
         let path = path.into();
         crate::util::merge_path(&self.0.root, &path).map(|path| LocalStoreFile { path })
     }
 }
 
+/// Type alias for entries in the local store, which can be files or directories.
 pub type LocalStoreEntry = Entry<LocalStoreFile, LocalStoreDirectory>;
 
 impl LocalStoreEntry {
+    /// Creates a new `LocalStoreEntry` from a `tokio::fs::DirEntry`.
+    ///
+    /// The entry is classified as either a file or directory based on its path.
     pub fn new(entry: tokio::fs::DirEntry) -> Result<Self> {
         let path = entry.path();
         if path.is_dir() {
@@ -59,6 +74,7 @@ impl LocalStoreEntry {
     }
 }
 
+/// Representation of a directory in the local store.
 #[derive(Debug)]
 pub struct LocalStoreDirectory {
     path: PathBuf,
@@ -68,10 +84,16 @@ impl StoreDirectory for LocalStoreDirectory {
     type Entry = LocalStoreEntry;
     type Reader = LocalStoreDirectoryReader;
 
+    /// Checks if the directory exists.
+    ///
+    /// Returns a future that resolves to `true` if the directory exists, otherwise `false`.
     async fn exists(&self) -> Result<bool> {
         tokio::fs::try_exists(&self.path).await
     }
 
+    /// Reads the contents of the directory.
+    ///
+    /// Returns a future that resolves to a reader for iterating over the directory's entries.
     async fn read(&self) -> Result<Self::Reader> {
         tokio::fs::read_dir(&self.path)
             .await
@@ -81,6 +103,7 @@ impl StoreDirectory for LocalStoreDirectory {
     }
 }
 
+/// Reader for streaming entries from a local store directory.
 #[derive(Debug)]
 pub struct LocalStoreDirectoryReader {
     inner: Pin<Box<tokio::fs::ReadDir>>,
@@ -89,6 +112,9 @@ pub struct LocalStoreDirectoryReader {
 impl Stream for LocalStoreDirectoryReader {
     type Item = Result<LocalStoreEntry>;
 
+    /// Polls for the next directory entry.
+    ///
+    /// This function is used to asynchronously retrieve the next entry in the directory.
     fn poll_next(
         self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
@@ -106,6 +132,7 @@ impl Stream for LocalStoreDirectoryReader {
 
 impl crate::StoreDirectoryReader<LocalStoreEntry> for LocalStoreDirectoryReader {}
 
+/// Representation of a file in the local store.
 #[derive(Debug)]
 pub struct LocalStoreFile {
     path: PathBuf,
@@ -115,6 +142,9 @@ impl StoreFile for LocalStoreFile {
     type FileReader = LocalStoreFileReader;
     type Metadata = LocalStoreFileMetadata;
 
+    /// Retrieves the file name from the path.
+    ///
+    /// This function extracts the file name by iterating over the components of the path in reverse order.
     fn filename(&self) -> Option<Cow<'_, str>> {
         self.path
             .components()
@@ -127,10 +157,16 @@ impl StoreFile for LocalStoreFile {
             .map(|value| value.to_string_lossy())
     }
 
+    /// Checks if the file exists.
+    ///
+    /// Returns a future that resolves to `true` if the file exists, otherwise `false`.
     async fn exists(&self) -> Result<bool> {
         tokio::fs::try_exists(&self.path).await
     }
 
+    /// Retrieves the metadata of the file.
+    ///
+    /// Returns a future that resolves to the file's metadata, such as size and timestamps.
     async fn metadata(&self) -> Result<Self::Metadata> {
         let meta = tokio::fs::metadata(&self.path).await?;
         let size = meta.size();
@@ -153,6 +189,9 @@ impl StoreFile for LocalStoreFile {
         })
     }
 
+    /// Reads a portion of the file's content, specified by a byte range.
+    ///
+    /// Returns a future that resolves to a reader that can read the specified range of the file.
     async fn read<R: RangeBounds<u64>>(&self, range: R) -> Result<Self::FileReader> {
         use tokio::io::AsyncSeekExt;
 
@@ -182,6 +221,7 @@ impl StoreFile for LocalStoreFile {
     }
 }
 
+/// Metadata associated with a file in the local store (size, created, modified timestamps).
 pub struct LocalStoreFileMetadata {
     size: u64,
     created: u64,
@@ -189,19 +229,23 @@ pub struct LocalStoreFileMetadata {
 }
 
 impl super::StoreMetadata for LocalStoreFileMetadata {
+    /// Returns the size of the file in bytes.
     fn size(&self) -> u64 {
         self.size
     }
 
+    /// Returns the creation timestamp of the file (epoch time).
     fn created(&self) -> u64 {
         self.created
     }
 
+    /// Returns the last modification timestamp of the file (epoch time).
     fn modified(&self) -> u64 {
         self.modified
     }
 }
 
+/// Reader for asynchronously reading the contents of a file in the local store.
 #[derive(Debug)]
 pub struct LocalStoreFileReader {
     file: tokio::fs::File,
@@ -212,6 +256,9 @@ pub struct LocalStoreFileReader {
 }
 
 impl tokio::io::AsyncRead for LocalStoreFileReader {
+    /// Polls for reading data from the file.
+    ///
+    /// This function reads data into the provided buffer, handling partial reads within the given range.
     fn poll_read(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
