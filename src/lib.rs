@@ -71,6 +71,8 @@ pub trait StoreDirectoryReader<E>: Stream<Item = Result<E>> + Sized {}
 pub trait StoreFile {
     /// Associated type for the reader that reads the file's content.
     type FileReader: StoreFileReader;
+    /// Associated type for the reader that reads the file's content.
+    type FileWriter: StoreFileWriter;
     /// Associated type for the metadata associated with the file.
     type Metadata: StoreMetadata;
 
@@ -97,11 +99,87 @@ pub trait StoreFile {
     /// range of the file.
     fn read<R: RangeBounds<u64>>(&self, range: R)
     -> impl Future<Output = Result<Self::FileReader>>;
+
+    /// Creates a writer
+    fn write(&self, options: WriteOptions) -> impl Future<Output = Result<Self::FileWriter>>;
+}
+
+#[derive(Clone, Copy, Debug)]
+enum WriteMode {
+    Append,
+    Truncate { offset: u64 },
+}
+
+#[derive(Clone, Debug)]
+pub struct WriteOptions {
+    mode: WriteMode,
+}
+
+impl WriteOptions {
+    pub fn append() -> Self {
+        Self {
+            mode: WriteMode::Append,
+        }
+    }
+
+    pub fn create() -> Self {
+        Self {
+            mode: WriteMode::Truncate { offset: 0 },
+        }
+    }
+
+    pub fn truncate(offset: u64) -> Self {
+        Self {
+            mode: WriteMode::Truncate { offset },
+        }
+    }
 }
 
 /// Trait representing a reader that can asynchronously read the contents of a
 /// file.
 pub trait StoreFileReader: tokio::io::AsyncRead {}
+
+/// Trait representing a writer that can asynchronously write the contents to a
+/// file.
+pub trait StoreFileWriter: tokio::io::AsyncWrite {}
+
+/// Struct for stores that don't support writing
+pub struct NoopFileWriter;
+
+impl StoreFileWriter for NoopFileWriter {}
+
+impl tokio::io::AsyncWrite for NoopFileWriter {
+    fn poll_flush(
+        self: std::pin::Pin<&mut Self>,
+        _cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<std::result::Result<(), std::io::Error>> {
+        std::task::Poll::Ready(Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "writer not supported for this store",
+        )))
+    }
+
+    fn poll_shutdown(
+        self: std::pin::Pin<&mut Self>,
+        _cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<std::result::Result<(), std::io::Error>> {
+        std::task::Poll::Ready(Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "writer not supported for this store",
+        )))
+    }
+
+    fn poll_write(
+        self: std::pin::Pin<&mut Self>,
+        _cx: &mut std::task::Context<'_>,
+        _buf: &[u8],
+    ) -> std::task::Poll<std::result::Result<usize, std::io::Error>> {
+        std::task::Poll::Ready(Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "writer not supported for this store",
+        )))
+    }
+}
 
 /// Enum representing either a file or a directory entry.
 #[derive(Debug)]
@@ -167,4 +245,17 @@ pub trait StoreMetadata {
 
     /// Returns the last modification timestamp of the file (epoch time).
     fn modified(&self) -> u64;
+}
+
+#[cfg(test)]
+fn enable_tracing() {
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::util::SubscriberInitExt;
+
+    let _ = tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "INFO".into()),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .try_init();
 }

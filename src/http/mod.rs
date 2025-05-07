@@ -105,7 +105,7 @@ impl HttpStore {
         let base_url = Url::parse(base_url.as_ref())
             .map_err(|err| Error::new(ErrorKind::InvalidInput, err))?;
         Ok(Self(Arc::new(InnerHttpStore {
-            base_url: base_url.into(),
+            base_url,
             parser: parser::Parser::default(),
             client: reqwest::Client::new(),
         })))
@@ -233,11 +233,12 @@ impl std::fmt::Debug for HttpStoreFile {
 
 impl crate::StoreFile for HttpStoreFile {
     type FileReader = HttpStoreFileReader;
+    type FileWriter = crate::NoopFileWriter;
     type Metadata = HttpStoreFileMetadata;
 
     /// Returns the filename portion of the HTTP path.
     fn filename(&self) -> Option<Cow<'_, str>> {
-        let cmp = self.path.components().last()?;
+        let cmp = self.path.components().next_back()?;
         Some(cmp.as_os_str().to_string_lossy())
     }
 
@@ -296,6 +297,13 @@ impl crate::StoreFile for HttpStoreFile {
             .await
             .map_err(Error::other)?;
         HttpStoreFileReader::from_response(res)
+    }
+
+    async fn write(&self, _options: crate::WriteOptions) -> Result<Self::FileWriter> {
+        Err(Error::new(
+            ErrorKind::Unsupported,
+            "http store doesn't support write operations",
+        ))
     }
 }
 
