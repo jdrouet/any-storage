@@ -23,6 +23,14 @@ local filesystem, an HTTP file index, or any other cloud storage service.
 ### ☁️ `PCloudStore`
 - Authenticates using username/password and reads from a pCloud account.
 
+## ✨ Backends Support
+
+| Backend | Read | Read partial           | Write | Write partial (append) |
+|:-------:|:----:|:----------------------:|:-----:|:----------------------:|
+| Local   | ✅   | ✅                     | ✅    | ✅                     |
+| Http    | ✅   | ❔ (depends on server) | 🚫    | 🚫                     |
+| PCoud   | ✅   | ✅                     | ✅    | 🚫                     |
+
 ## 🔧 Usage Example
 
 ```rust,ignore
