@@ -246,3 +246,15 @@ pub trait StoreMetadata {
     /// Returns the last modification timestamp of the file (epoch time).
     fn modified(&self) -> u64;
 }
+
+#[cfg(test)]
+fn enable_tracing() {
+    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+    let _ = tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "INFO".into()),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .try_init();
+}

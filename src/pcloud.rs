@@ -240,6 +240,7 @@ impl crate::StoreFile for PCloudStoreFile {
         PCloudStoreFileReader::from_response(res)
     }
 
+    /// Creates a writer to a file in pcloud
     async fn write(&self, options: crate::WriteOptions) -> Result<Self::FileWriter> {
         match options.mode {
             WriteMode::Append => {
@@ -272,18 +273,17 @@ impl crate::StoreFile for PCloudStoreFile {
         let (write_buffer, read_buffer) = tokio::io::duplex(8192);
 
         let client = self.store.clone();
-        // Spawn the upload task, which reads from the read_buffer
-        let upload_task: JoinHandle<Result<()>> = tokio::spawn(async move {
-            let stream = ReaderStream::new(read_buffer);
-            let files = pcloud::file::upload::MultiFileUpload::default()
-                .with_stream_entry(filename, None, stream);
+        let stream = ReaderStream::new(read_buffer);
+        let files = pcloud::file::upload::MultiFileUpload::default()
+            .with_stream_entry(filename, None, stream);
 
+        // spawn a task that will keep the request connected while we are pushing data
+        let upload_task: JoinHandle<Result<()>> = tokio::spawn(async move {
             client
                 .upload_files(parent, files)
                 .await
-                .map_err(|err| Error::new(ErrorKind::Other, err))?;
-
-            Ok(())
+                .map(|_| ())
+                .map_err(Error::other)
         });
 
         Ok(PCloudStoreFileWriter {
@@ -293,6 +293,7 @@ impl crate::StoreFile for PCloudStoreFile {
     }
 }
 
+/// Writer to PCloud file
 #[derive(Debug)]
 pub struct PCloudStoreFileWriter {
     write_buffer: DuplexStream,
@@ -305,11 +306,19 @@ impl tokio::io::AsyncWrite for PCloudStoreFileWriter {
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
     ) -> Poll<Result<usize>> {
-        Pin::new(&mut self.write_buffer).poll_write(cx, buf)
+        if self.upload_task.is_finished() {
+            Poll::Ready(Err(Error::new(ErrorKind::BrokenPipe, "request closed")))
+        } else {
+            Pin::new(&mut self.write_buffer).poll_write(cx, buf)
+        }
     }
 
     fn poll_flush(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Result<()>> {
-        Pin::new(&mut self.write_buffer).poll_flush(cx)
+        if self.upload_task.is_finished() {
+            Poll::Ready(Err(Error::new(ErrorKind::BrokenPipe, "request closed")))
+        } else {
+            Pin::new(&mut self.write_buffer).poll_flush(cx)
+        }
     }
 
     fn poll_shutdown(
@@ -381,5 +390,53 @@ impl PCloudStoreEntry {
                 Self::Directory(PCloudStoreDirectory { store, path })
             }
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mockito::Matcher;
+    use tokio::io::AsyncWriteExt;
+
+    use crate::{Store, StoreFile, WriteOptions};
+
+    use super::*;
+
+    #[tokio::test]
+    async fn should_write_file() {
+        crate::enable_tracing();
+        let content = include_bytes!("lib.rs");
+        let mut srv = mockito::Server::new_async().await;
+        let mock = srv
+            .mock("POST", "/uploadfile")
+            .match_query(Matcher::AllOf(vec![
+                Matcher::UrlEncoded("username".into(), "username".into()),
+                Matcher::UrlEncoded("password".into(), "password".into()),
+                Matcher::UrlEncoded("path".into(), "/foo".into()),
+            ]))
+            .match_header(
+                "content-type",
+                Matcher::Regex("multipart/form-data; boundary=.*".to_string()),
+            )
+            .match_body(Matcher::Any)
+            .with_status(200)
+            // we don't care about the body
+            .with_body(r#"{"result": 0, "metadata": [], "checksums": [], "fileids": []}"#)
+            .create_async()
+            .await;
+
+        let store = PCloudStore::new(
+            srv.url(),
+            Credentials {
+                username: "username".into(),
+                password: "password".into(),
+            },
+        )
+        .unwrap();
+        let file = store.get_file("/foo/bar.txt").await.unwrap();
+        let mut writer = file.write(WriteOptions::create()).await.unwrap();
+        writer.write_all(content).await.unwrap();
+        writer.shutdown().await.unwrap();
+        mock.assert_async().await;
     }
 }
