@@ -181,7 +181,7 @@ impl crate::StoreFile for PCloudStoreFile {
 
     /// Returns the filename portion of the file's path.
     fn filename(&self) -> Option<Cow<'_, str>> {
-        let cmp = self.path.components().last()?;
+        let cmp = self.path.components().next_back()?;
         Some(cmp.as_os_str().to_string_lossy())
     }
 

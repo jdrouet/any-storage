@@ -105,7 +105,7 @@ impl HttpStore {
         let base_url = Url::parse(base_url.as_ref())
             .map_err(|err| Error::new(ErrorKind::InvalidInput, err))?;
         Ok(Self(Arc::new(InnerHttpStore {
-            base_url: base_url.into(),
+            base_url,
             parser: parser::Parser::default(),
             client: reqwest::Client::new(),
         })))
@@ -238,7 +238,7 @@ impl crate::StoreFile for HttpStoreFile {
 
     /// Returns the filename portion of the HTTP path.
     fn filename(&self) -> Option<Cow<'_, str>> {
-        let cmp = self.path.components().last()?;
+        let cmp = self.path.components().next_back()?;
         Some(cmp.as_os_str().to_string_lossy())
     }
 
