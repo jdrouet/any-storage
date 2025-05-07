@@ -145,6 +145,7 @@ pub struct LocalStoreFile {
 
 impl StoreFile for LocalStoreFile {
     type FileReader = LocalStoreFileReader;
+    type FileWriter = crate::NoopFileWriter;
     type Metadata = LocalStoreFileMetadata;
 
     /// Retrieves the file name from the path.

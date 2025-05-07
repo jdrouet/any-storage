@@ -172,6 +172,7 @@ impl std::fmt::Debug for PCloudStoreFile {
 
 impl crate::StoreFile for PCloudStoreFile {
     type FileReader = PCloudStoreFileReader;
+    type FileWriter = crate::NoopFileWriter;
     type Metadata = PCloudStoreFileMetadata;
 
     /// Returns the filename portion of the file's path.

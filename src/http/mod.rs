@@ -233,6 +233,7 @@ impl std::fmt::Debug for HttpStoreFile {
 
 impl crate::StoreFile for HttpStoreFile {
     type FileReader = HttpStoreFileReader;
+    type FileWriter = crate::NoopFileWriter;
     type Metadata = HttpStoreFileMetadata;
 
     /// Returns the filename portion of the HTTP path.
