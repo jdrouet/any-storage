@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::io::{Error, ErrorKind, Result};
+use std::io::{Error, ErrorKind, Result, SeekFrom};
 use std::ops::{Bound, RangeBounds};
 use std::os::unix::fs::MetadataExt;
 use std::path::{Component, PathBuf};
@@ -9,8 +9,9 @@ use std::task::Poll;
 use std::time::SystemTime;
 
 use futures::Stream;
+use tokio::io::AsyncSeekExt;
 
-use crate::{Entry, Store, StoreDirectory, StoreFile, StoreFileReader};
+use crate::{Entry, Store, StoreDirectory, StoreFile, StoreFileReader, WriteMode};
 
 /// Internal representation of the local store with a root path.
 #[derive(Debug)]
@@ -145,7 +146,7 @@ pub struct LocalStoreFile {
 
 impl StoreFile for LocalStoreFile {
     type FileReader = LocalStoreFileReader;
-    type FileWriter = crate::NoopFileWriter;
+    type FileWriter = LocalStoreFileWriter;
     type Metadata = LocalStoreFileMetadata;
 
     /// Retrieves the file name from the path.
@@ -229,6 +230,23 @@ impl StoreFile for LocalStoreFile {
             position: start,
         })
     }
+
+    async fn write(&self, options: crate::WriteOptions) -> Result<Self::FileWriter> {
+        let mut file = tokio::fs::OpenOptions::new()
+            .append(matches!(options.mode, WriteMode::Append))
+            .truncate(matches!(options.mode, WriteMode::Truncate { .. }))
+            .write(true)
+            .create(true)
+            .open(&self.path)
+            .await?;
+        match options.mode {
+            WriteMode::Truncate { offset } if offset > 0 => {
+                file.seek(SeekFrom::Start(offset)).await?;
+            }
+            _ => {}
+        };
+        Ok(LocalStoreFileWriter(file))
+    }
 }
 
 /// Metadata associated with a file in the local store (size, created, modified
@@ -306,6 +324,37 @@ impl tokio::io::AsyncRead for LocalStoreFileReader {
 }
 
 impl StoreFileReader for LocalStoreFileReader {}
+
+pub struct LocalStoreFileWriter(tokio::fs::File);
+
+impl tokio::io::AsyncWrite for LocalStoreFileWriter {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &[u8],
+    ) -> Poll<Result<usize>> {
+        // Pinning the inner file (unwrap since it is wrapped in Pin)
+        let file = &mut self.as_mut().0;
+
+        // Use tokio::io::AsyncWriteExt::write to write to the file
+        Pin::new(file).poll_write(cx, buf)
+    }
+
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Result<()>> {
+        let file = &mut self.as_mut().0;
+        Pin::new(file).poll_flush(cx)
+    }
+
+    fn poll_shutdown(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Result<()>> {
+        let file = &mut self.as_mut().0;
+        Pin::new(file).poll_shutdown(cx)
+    }
+}
+
+impl crate::StoreFileWriter for LocalStoreFileWriter {}
 
 #[cfg(test)]
 mod tests {

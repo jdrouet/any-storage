@@ -298,6 +298,13 @@ impl crate::StoreFile for HttpStoreFile {
             .map_err(Error::other)?;
         HttpStoreFileReader::from_response(res)
     }
+
+    async fn write(&self, _options: crate::WriteOptions) -> Result<Self::FileWriter> {
+        Err(Error::new(
+            ErrorKind::Unsupported,
+            "http store doesn't support write operations",
+        ))
+    }
 }
 
 /// Metadata for an HTTP file, containing size and last modification time.

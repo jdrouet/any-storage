@@ -235,6 +235,10 @@ impl crate::StoreFile for PCloudStoreFile {
             .map_err(Error::other)?;
         PCloudStoreFileReader::from_response(res)
     }
+
+    async fn write(&self, _options: crate::WriteOptions) -> Result<Self::FileWriter> {
+        Ok(crate::NoopFileWriter)
+    }
 }
 
 /// Metadata for a file in the pCloud store.

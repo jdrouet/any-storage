@@ -99,6 +99,40 @@ pub trait StoreFile {
     /// range of the file.
     fn read<R: RangeBounds<u64>>(&self, range: R)
     -> impl Future<Output = Result<Self::FileReader>>;
+
+    /// Creates a writer
+    fn write(&self, options: WriteOptions) -> impl Future<Output = Result<Self::FileWriter>>;
+}
+
+#[derive(Clone, Copy, Debug)]
+enum WriteMode {
+    Append,
+    Truncate { offset: u64 },
+}
+
+#[derive(Clone, Debug)]
+pub struct WriteOptions {
+    mode: WriteMode,
+}
+
+impl WriteOptions {
+    pub fn append() -> Self {
+        Self {
+            mode: WriteMode::Append,
+        }
+    }
+
+    pub fn create() -> Self {
+        Self {
+            mode: WriteMode::Truncate { offset: 0 },
+        }
+    }
+
+    pub fn truncate(offset: u64) -> Self {
+        Self {
+            mode: WriteMode::Truncate { offset },
+        }
+    }
 }
 
 /// Trait representing a reader that can asynchronously read the contents of a
