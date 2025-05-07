@@ -7,7 +7,7 @@ local filesystem, an HTTP file index, or any other cloud storage service.
 ## ✨ Features
 
 - **Unified `Store` Trait**: A common trait for file and directory access across storage backends.
-- **Streaming Reads**: All file reads are implemented using `tokio::io::AsyncRead` for efficient streaming.
+- **Streaming Reads and Writes**: All file reads and writes are implemented using `tokio::io::AsyncRead` and `tokio::io::AsyncWrite` for efficient streaming.
 - **Range Requests**: HTTP and pCloud support partial reads using byte-range headers.
 - **Metadata Support**: Each backend provides basic file metadata such as size, creation, and modification time.
 - **Pluggable Backends**: Easily extendable to support additional services like S3, FTP, or Dropbox.
@@ -43,6 +43,7 @@ async fn main() -> std::io::Result<()> {
 - `Store`: Main trait for fetching files and directories.
 - `StoreFile` and `StoreDirectory`: Trait abstractions for files and folders.
 - `StoreFileReader`: Async stream wrapper over file content.
+- `StoreFileWriter`: Async stream wrapper to write to a file.
 - Each backend implements these traits for its own types, hiding service-specific logic behind the unified interface.
 
 ## 🔐 Security Notes
@@ -52,10 +53,10 @@ async fn main() -> std::io::Result<()> {
 
 ## 📦 Crate Status
 
-- Written in Rust 2021 Edition
+- Written in Rust 2024 Edition
 - Async-first design, built on top of `tokio`, `reqwest`, `futures`, and `bytes`.
 
 ## 🚧 TODO / Roadmap
 
-- Write/delete support
+- Delete support
 - More backends (S3, google drive, proton drive, etc)
