@@ -7,9 +7,13 @@ use std::task::Poll;
 
 use futures::Stream;
 use pcloud::file::FileIdentifier;
-use pcloud::folder::FolderIdentifier;
+use pcloud::folder::{FolderIdentifier, ROOT};
 use reqwest::header;
+use tokio::io::DuplexStream;
+use tokio::task::JoinHandle;
+use tokio_util::io::ReaderStream;
 
+use crate::WriteMode;
 use crate::http::{HttpStoreFileReader, RangeHeader};
 
 /// Stores username and password credentials for authentication.
@@ -172,7 +176,7 @@ impl std::fmt::Debug for PCloudStoreFile {
 
 impl crate::StoreFile for PCloudStoreFile {
     type FileReader = PCloudStoreFileReader;
-    type FileWriter = crate::NoopFileWriter;
+    type FileWriter = PCloudStoreFileWriter;
     type Metadata = PCloudStoreFileMetadata;
 
     /// Returns the filename portion of the file's path.
@@ -236,10 +240,98 @@ impl crate::StoreFile for PCloudStoreFile {
         PCloudStoreFileReader::from_response(res)
     }
 
-    async fn write(&self, _options: crate::WriteOptions) -> Result<Self::FileWriter> {
-        Ok(crate::NoopFileWriter)
+    async fn write(&self, options: crate::WriteOptions) -> Result<Self::FileWriter> {
+        match options.mode {
+            WriteMode::Append => {
+                return Err(Error::new(
+                    ErrorKind::Unsupported,
+                    "pcloud store doesn't support append write",
+                ));
+            }
+            WriteMode::Truncate { offset } if offset != 0 => {
+                return Err(Error::new(
+                    ErrorKind::Unsupported,
+                    "pcloud store doesn't support truncated write",
+                ));
+            }
+            _ => {}
+        };
+        let parent: FolderIdentifier<'static> = self
+            .path
+            .parent()
+            .map(|parent| parent.to_path_buf())
+            .map(|parent| FolderIdentifier::path(parent.to_string_lossy().to_string()))
+            .unwrap_or_else(|| FolderIdentifier::FolderId(ROOT));
+        let filename = self
+            .path
+            .file_name()
+            .ok_or_else(|| Error::new(ErrorKind::InvalidData, "unable to get file name"))?;
+        let filename = filename.to_string_lossy().to_string();
+
+        // TODO find a way to make the 8KB buffer a parameter
+        let (write_buffer, read_buffer) = tokio::io::duplex(8192);
+
+        let client = self.store.clone();
+        // Spawn the upload task, which reads from the read_buffer
+        let upload_task: JoinHandle<Result<()>> = tokio::spawn(async move {
+            let stream = ReaderStream::new(read_buffer);
+            let files = pcloud::file::upload::MultiFileUpload::default()
+                .with_stream_entry(filename, None, stream);
+
+            client
+                .upload_files(parent, files)
+                .await
+                .map_err(|err| Error::new(ErrorKind::Other, err))?;
+
+            Ok(())
+        });
+
+        Ok(PCloudStoreFileWriter {
+            write_buffer,
+            upload_task,
+        })
     }
 }
+
+#[derive(Debug)]
+pub struct PCloudStoreFileWriter {
+    write_buffer: DuplexStream,
+    upload_task: JoinHandle<Result<()>>,
+}
+
+impl tokio::io::AsyncWrite for PCloudStoreFileWriter {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &[u8],
+    ) -> Poll<Result<usize>> {
+        Pin::new(&mut self.write_buffer).poll_write(cx, buf)
+    }
+
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Result<()>> {
+        Pin::new(&mut self.write_buffer).poll_flush(cx)
+    }
+
+    fn poll_shutdown(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Result<()>> {
+        let shutdown = Pin::new(&mut self.write_buffer).poll_shutdown(cx);
+
+        if shutdown.is_ready() {
+            let poll = Pin::new(&mut self.upload_task).poll(cx);
+            match poll {
+                Poll::Ready(Ok(res)) => Poll::Ready(res),
+                Poll::Ready(Err(err)) => Poll::Ready(Err(Error::other(err))),
+                Poll::Pending => Poll::Pending,
+            }
+        } else {
+            Poll::Pending
+        }
+    }
+}
+
+impl crate::StoreFileWriter for PCloudStoreFileWriter {}
 
 /// Metadata for a file in the pCloud store.
 pub struct PCloudStoreFileMetadata {

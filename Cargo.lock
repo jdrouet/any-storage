@@ -55,6 +55,7 @@ dependencies = [
  "test-case",
  "time",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]
@@ -793,9 +794,9 @@ dependencies = [
 
 [[package]]
 name = "pcloud"
-version = "3.0.0"
+version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31e06cd55a2f4d3da3ea27911e0a74f43c41c3457b89c1d6eb2624196d437c8b"
+checksum = "2ff21123da83433742ce2dbc41ccc487e9925bc1e8973a87810b5da6386e6a9f"
 dependencies = [
  "bytes",
  "chrono",
