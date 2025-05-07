@@ -249,7 +249,8 @@ pub trait StoreMetadata {
 
 #[cfg(test)]
 fn enable_tracing() {
-    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::util::SubscriberInitExt;
 
     let _ = tracing_subscriber::registry()
         .with(

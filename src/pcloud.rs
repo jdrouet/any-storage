@@ -398,9 +398,8 @@ mod tests {
     use mockito::Matcher;
     use tokio::io::AsyncWriteExt;
 
-    use crate::{Store, StoreFile, WriteOptions};
-
     use super::*;
+    use crate::{Store, StoreFile, WriteOptions};
 
     #[tokio::test]
     async fn should_write_file() {
