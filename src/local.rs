@@ -23,6 +23,13 @@ struct InnerLocalStore {
 #[derive(Debug, Clone)]
 pub struct LocalStore(Arc<InnerLocalStore>);
 
+impl LocalStore {
+    /// Constructor of the localstore
+    pub fn new<P: Into<PathBuf>>(path: P) -> Self {
+        Self::from(path.into())
+    }
+}
+
 impl From<PathBuf> for LocalStore {
     /// Converts a `PathBuf` into a `LocalStore`.
     ///

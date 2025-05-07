@@ -33,8 +33,9 @@ local filesystem, an HTTP file index, or any other cloud storage service.
 
 ## 🔧 Usage Example
 
-```rust,ignore
-use use_storage::{Store, LocalStore};
+```rust,no_run
+use any_storage::{Store, StoreFile};
+use any_storage::local::LocalStore;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
