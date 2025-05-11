@@ -6,6 +6,15 @@ use std::task::{Context, Poll};
 use futures::StreamExt;
 
 #[derive(Clone, Debug, derive_more::From)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "type", rename_all = "kebab-case"))]
+pub enum AnyStoreConfig {
+    Http(crate::http::HttpStoreConfig),
+    Local(crate::local::LocalStoreConfig),
+    PCloud(crate::pcloud::PCloudStoreConfig),
+}
+
+#[derive(Clone, Debug, derive_more::From)]
 pub enum AnyStore {
     Http(crate::http::HttpStore),
     Local(crate::local::LocalStore),

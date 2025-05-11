@@ -60,6 +60,18 @@ impl<R: RangeBounds<u64>> std::fmt::Display for RangeHeader<R> {
     }
 }
 
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
+pub struct HttpStoreConfig {
+    pub base_url: String,
+}
+
+impl HttpStoreConfig {
+    pub fn build(&self) -> Result<HttpStore> {
+        HttpStore::new(&self.base_url)
+    }
+}
+
 /// Internal representation of the HTTP-backed store.
 struct InnerHttpStore {
     base_url: Url,

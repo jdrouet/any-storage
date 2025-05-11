@@ -16,19 +16,45 @@ use tokio_util::io::ReaderStream;
 use crate::WriteMode;
 use crate::http::{HttpStoreFileReader, RangeHeader};
 
-/// Stores username and password credentials for authentication.
-pub struct Credentials {
-    username: Box<str>,
-    password: Box<str>,
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
+pub enum PCloudStoreConfigOrigin {
+    Region { region: pcloud::Region },
+    Url { url: Cow<'static, str> },
 }
 
-impl std::fmt::Debug for Credentials {
-    /// Omits the password field from debug output for security.
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct(stringify!(Credentials))
-            .field("username", &self.username)
-            .field("password", &"[REDACTED]")
-            .finish_non_exhaustive()
+impl Default for PCloudStoreConfigOrigin {
+    fn default() -> Self {
+        Self::Region {
+            region: pcloud::Region::Eu,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
+pub struct PCloudStoreConfig {
+    #[cfg_attr(feature = "serde", serde(default, flatten))]
+    pub origin: PCloudStoreConfigOrigin,
+    pub credentials: pcloud::Credentials,
+}
+
+impl PCloudStoreConfig {
+    pub fn build(&self) -> Result<PCloudStore> {
+        let mut builder = pcloud::Client::builder();
+        match self.origin {
+            PCloudStoreConfigOrigin::Region { region } => {
+                builder.set_region(region);
+            }
+            PCloudStoreConfigOrigin::Url { ref url } => {
+                builder.set_base_url(url.clone());
+            }
+        };
+        builder.set_credentials(self.credentials.clone());
+        let client = builder
+            .build()
+            .map_err(|err| std::io::Error::new(std::io::ErrorKind::InvalidInput, err))?;
+        Ok(PCloudStore(Arc::new(client)))
     }
 }
 
@@ -47,13 +73,13 @@ static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_P
 
 impl PCloudStore {
     /// Creates a new `PCloudStore` using a base URL and login credentials.
-    pub fn new(base_url: impl Into<Cow<'static, str>>, credentials: Credentials) -> Result<Self> {
+    pub fn new(
+        base_url: impl Into<Cow<'static, str>>,
+        credentials: pcloud::Credentials,
+    ) -> Result<Self> {
         let client = pcloud::Client::builder()
             .with_base_url(base_url)
-            .with_credentials(pcloud::Credentials::UsernamePassword {
-                username: credentials.username.to_string(),
-                password: credentials.password.to_string(),
-            })
+            .with_credentials(credentials)
             .build()
             .unwrap();
         Ok(Self(Arc::new(client)))

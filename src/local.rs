@@ -13,6 +13,20 @@ use tokio::io::AsyncSeekExt;
 
 use crate::{Entry, Store, StoreDirectory, StoreFile, StoreFileReader, WriteMode};
 
+/// Configuration for [`LocalStore`].
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
+pub struct LocalStoreConfig {
+    /// Root directory for that store
+    pub path: PathBuf,
+}
+
+impl LocalStoreConfig {
+    pub fn build(&self) -> Result<LocalStore> {
+        Ok(LocalStore::new(self.path.clone()))
+    }
+}
+
 /// Internal representation of the local store with a root path.
 #[derive(Debug)]
 struct InnerLocalStore {
