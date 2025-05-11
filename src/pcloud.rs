@@ -316,7 +316,14 @@ impl crate::StoreFile for PCloudStoreFile {
         let parent: FolderIdentifier<'static> = path
             .parent()
             .map(|parent| parent.to_path_buf())
-            .map(|parent| FolderIdentifier::path(parent.to_string_lossy().to_string()))
+            .map(|parent| {
+                let parent = if parent.is_absolute() {
+                    parent.to_string_lossy().to_string()
+                } else {
+                    format!("/{}", parent.to_string_lossy())
+                };
+                FolderIdentifier::path(parent)
+            })
             .unwrap_or_else(|| FolderIdentifier::FolderId(ROOT));
         let filename = path
             .file_name()
