@@ -37,6 +37,8 @@ pub struct PCloudStoreConfig {
     #[cfg_attr(feature = "serde", serde(default, flatten))]
     pub origin: PCloudStoreConfigOrigin,
     pub credentials: pcloud::Credentials,
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub root: PathBuf,
 }
 
 impl PCloudStoreConfig {
@@ -54,13 +56,21 @@ impl PCloudStoreConfig {
         let client = builder
             .build()
             .map_err(|err| std::io::Error::new(std::io::ErrorKind::InvalidInput, err))?;
-        Ok(PCloudStore(Arc::new(client)))
+        Ok(PCloudStore(Arc::new(InnerStore {
+            client,
+            root: self.root.clone(),
+        })))
     }
+}
+
+struct InnerStore {
+    client: pcloud::Client,
+    root: PathBuf,
 }
 
 /// A store backed by the pCloud remote storage service.
 #[derive(Clone)]
-pub struct PCloudStore(Arc<pcloud::Client>);
+pub struct PCloudStore(Arc<InnerStore>);
 
 impl std::fmt::Debug for PCloudStore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -82,7 +92,10 @@ impl PCloudStore {
             .with_credentials(credentials)
             .build()
             .unwrap();
-        Ok(Self(Arc::new(client)))
+        Ok(Self(Arc::new(InnerStore {
+            client,
+            root: PathBuf::new(),
+        })))
     }
 }
 
@@ -111,7 +124,7 @@ impl crate::Store for PCloudStore {
 
 /// A directory in the pCloud file store.
 pub struct PCloudStoreDirectory {
-    store: Arc<pcloud::Client>,
+    store: Arc<InnerStore>,
     path: PathBuf,
 }
 
@@ -130,7 +143,7 @@ impl crate::StoreDirectory for PCloudStoreDirectory {
     /// Checks if the directory exists on pCloud.
     async fn exists(&self) -> Result<bool> {
         let identifier = FolderIdentifier::path(self.path.to_string_lossy());
-        match self.store.list_folder(identifier).await {
+        match self.store.client.list_folder(identifier).await {
             Ok(_) => Ok(true),
             Err(pcloud::Error::Protocol(2005, _)) => Ok(false),
             Err(other) => Err(Error::other(other)),
@@ -139,8 +152,9 @@ impl crate::StoreDirectory for PCloudStoreDirectory {
 
     /// Reads the directory contents from pCloud and returns an entry reader.
     async fn read(&self) -> Result<Self::Reader> {
-        let identifier = FolderIdentifier::path(self.path.to_string_lossy());
-        match self.store.list_folder(identifier).await {
+        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let identifier = FolderIdentifier::path(path.to_string_lossy());
+        match self.store.client.list_folder(identifier).await {
             Ok(folder) => Ok(PCloudStoreDirectoryReader {
                 store: self.store.clone(),
                 path: self.path.clone(),
@@ -156,7 +170,7 @@ impl crate::StoreDirectory for PCloudStoreDirectory {
 
 /// A streaming reader over entries in a pCloud directory.
 pub struct PCloudStoreDirectoryReader {
-    store: Arc<pcloud::Client>,
+    store: Arc<InnerStore>,
     path: PathBuf,
     entries: Vec<pcloud::entry::Entry>,
 }
@@ -198,7 +212,7 @@ impl crate::StoreDirectoryReader<PCloudStoreEntry> for PCloudStoreDirectoryReade
 
 /// A file in the pCloud file store.
 pub struct PCloudStoreFile {
-    store: Arc<pcloud::Client>,
+    store: Arc<InnerStore>,
     path: PathBuf,
 }
 
@@ -223,8 +237,9 @@ impl crate::StoreFile for PCloudStoreFile {
 
     /// Checks whether the file exists on pCloud.
     async fn exists(&self) -> Result<bool> {
-        let identifier = FileIdentifier::path(self.path.to_string_lossy());
-        match self.store.get_file_checksum(identifier).await {
+        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let identifier = FileIdentifier::path(path.to_string_lossy());
+        match self.store.client.get_file_checksum(identifier).await {
             Ok(_) => Ok(true),
             Err(pcloud::Error::Protocol(2009, _)) => Ok(false),
             Err(other) => Err(Error::other(other)),
@@ -234,8 +249,9 @@ impl crate::StoreFile for PCloudStoreFile {
     /// Retrieves metadata about the file (size, creation, and modification
     /// times).
     async fn metadata(&self) -> Result<Self::Metadata> {
-        let identifier = FileIdentifier::path(self.path.to_string_lossy());
-        match self.store.get_file_checksum(identifier).await {
+        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let identifier = FileIdentifier::path(path.to_string_lossy());
+        match self.store.client.get_file_checksum(identifier).await {
             Ok(file) => Ok(PCloudStoreFileMetadata {
                 size: file.metadata.size.unwrap_or(0) as u64,
                 created: file.metadata.base.created.timestamp() as u64,
@@ -251,9 +267,11 @@ impl crate::StoreFile for PCloudStoreFile {
     /// Reads a byte range of the file content using a download link from
     /// pCloud.
     async fn read<R: std::ops::RangeBounds<u64>>(&self, range: R) -> Result<Self::FileReader> {
-        let identifier = FileIdentifier::path(self.path.to_string_lossy());
+        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let identifier = FileIdentifier::path(path.to_string_lossy());
         let links = self
             .store
+            .client
             .get_file_link(identifier)
             .await
             .map_err(|err| match err {
@@ -293,14 +311,14 @@ impl crate::StoreFile for PCloudStoreFile {
             }
             _ => {}
         };
-        let parent: FolderIdentifier<'static> = self
-            .path
+
+        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let parent: FolderIdentifier<'static> = path
             .parent()
             .map(|parent| parent.to_path_buf())
             .map(|parent| FolderIdentifier::path(parent.to_string_lossy().to_string()))
             .unwrap_or_else(|| FolderIdentifier::FolderId(ROOT));
-        let filename = self
-            .path
+        let filename = path
             .file_name()
             .ok_or_else(|| Error::new(ErrorKind::InvalidData, "unable to get file name"))?;
         let filename = filename.to_string_lossy().to_string();
@@ -316,6 +334,7 @@ impl crate::StoreFile for PCloudStoreFile {
         // spawn a task that will keep the request connected while we are pushing data
         let upload_task: JoinHandle<Result<()>> = tokio::spawn(async move {
             client
+                .client
                 .upload_files(parent, files)
                 .await
                 .map(|_| ())
@@ -415,11 +434,7 @@ impl PCloudStoreEntry {
     /// Constructs a `PCloudStoreEntry` from a parent path and a pCloud entry.
     ///
     /// Determines if the entry is a file or directory.
-    fn new(
-        store: Arc<pcloud::Client>,
-        parent: PathBuf,
-        entry: pcloud::entry::Entry,
-    ) -> Result<Self> {
+    fn new(store: Arc<InnerStore>, parent: PathBuf, entry: pcloud::entry::Entry) -> Result<Self> {
         let path = parent.join(&entry.base().name);
         Ok(match entry {
             pcloud::entry::Entry::File(_) => Self::File(PCloudStoreFile { store, path }),
