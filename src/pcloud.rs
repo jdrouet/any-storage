@@ -478,7 +478,7 @@ mod tests {
 
         let store = PCloudStore::new(
             srv.url(),
-            Credentials {
+            pcloud::Credentials::UsernamePassword {
                 username: "username".into(),
                 password: "password".into(),
             },
