@@ -353,6 +353,22 @@ impl crate::StoreFile for PCloudStoreFile {
             upload_task,
         })
     }
+
+    async fn delete(&self) -> Result<()> {
+        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let identifier = FileIdentifier::path(path.to_string_lossy());
+        self.store
+            .client
+            .delete_file(identifier)
+            .await
+            .map(|_| ())
+            .map_err(|err| match err {
+                pcloud::Error::Protocol(2009, _) => {
+                    Error::new(ErrorKind::NotFound, "file not found")
+                }
+                other => Error::other(other),
+            })
+    }
 }
 
 /// Writer to PCloud file

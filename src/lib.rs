@@ -104,6 +104,9 @@ pub trait StoreFile {
 
     /// Creates a writer
     fn write(&self, options: WriteOptions) -> impl Future<Output = Result<Self::FileWriter>>;
+
+    /// Deletes the file
+    fn delete(&self) -> impl Future<Output = Result<()>>;
 }
 
 #[derive(Clone, Copy, Debug)]

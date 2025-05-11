@@ -268,6 +268,10 @@ impl StoreFile for LocalStoreFile {
         };
         Ok(LocalStoreFileWriter(file))
     }
+
+    async fn delete(&self) -> Result<()> {
+        tokio::fs::remove_file(&self.path).await
+    }
 }
 
 /// Metadata associated with a file in the local store (size, created, modified

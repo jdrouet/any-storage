@@ -112,6 +112,14 @@ impl crate::StoreFile for AnyStoreFile {
             Self::PCloud(inner) => inner.write(options).await.map(AnyStoreFileWriter::PCloud),
         }
     }
+
+    async fn delete(&self) -> Result<()> {
+        match self {
+            Self::Http(inner) => inner.delete().await,
+            Self::Local(inner) => inner.delete().await,
+            Self::PCloud(inner) => inner.delete().await,
+        }
+    }
 }
 
 #[derive(Debug)]

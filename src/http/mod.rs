@@ -326,6 +326,13 @@ impl crate::StoreFile for HttpStoreFile {
             "http store doesn't support write operations",
         ))
     }
+
+    async fn delete(&self) -> Result<()> {
+        Err(Error::new(
+            ErrorKind::Unsupported,
+            "http store doesn't support write operations",
+        ))
+    }
 }
 
 /// Metadata for an HTTP file, containing size and last modification time.
