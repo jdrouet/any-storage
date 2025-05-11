@@ -8,6 +8,7 @@ edition = "2024"
 
 [dependencies]
 bytes = "1.10"
+derive_more = { version = "2.0.1", default-features = false, features = ["from"] }
 futures = { version = "0.3", default-features = false }
 pcloud = { version = "3.1", default-features = false }
 percent-encoding = "2.3"

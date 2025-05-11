@@ -258,6 +258,7 @@ impl StoreFile for LocalStoreFile {
 
 /// Metadata associated with a file in the local store (size, created, modified
 /// timestamps).
+#[derive(Clone, Debug)]
 pub struct LocalStoreFileMetadata {
     size: u64,
     created: u64,
@@ -332,6 +333,7 @@ impl tokio::io::AsyncRead for LocalStoreFileReader {
 
 impl StoreFileReader for LocalStoreFileReader {}
 
+#[derive(Debug)]
 pub struct LocalStoreFileWriter(tokio::fs::File);
 
 impl tokio::io::AsyncWrite for LocalStoreFileWriter {

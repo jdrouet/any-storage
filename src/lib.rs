@@ -7,6 +7,8 @@ use std::path::PathBuf;
 
 use futures::Stream;
 
+/// Module wrapping all the implementations in an enum.
+pub mod any;
 /// Module for HTTP storage implementation.
 pub mod http;
 /// Module for local storage implementation.
@@ -144,6 +146,7 @@ pub trait StoreFileReader: tokio::io::AsyncRead {}
 pub trait StoreFileWriter: tokio::io::AsyncWrite {}
 
 /// Struct for stores that don't support writing
+#[derive(Debug)]
 pub struct NoopFileWriter;
 
 impl StoreFileWriter for NoopFileWriter {}

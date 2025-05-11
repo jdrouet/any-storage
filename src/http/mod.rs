@@ -193,6 +193,15 @@ pub struct HttpStoreDirectoryReader {
     entries: Vec<String>,
 }
 
+impl std::fmt::Debug for HttpStoreDirectoryReader {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct(stringify!(HttpStoreDirectoryReader))
+            .field("path", &self.path)
+            .field("entries", &self.entries)
+            .finish_non_exhaustive()
+    }
+}
+
 impl Stream for HttpStoreDirectoryReader {
     type Item = Result<HttpStoreEntry>;
 
@@ -308,6 +317,7 @@ impl crate::StoreFile for HttpStoreFile {
 }
 
 /// Metadata for an HTTP file, containing size and last modification time.
+#[derive(Clone, Debug)]
 pub struct HttpStoreFileMetadata {
     size: u64,
     modified: u64,
@@ -333,6 +343,13 @@ impl super::StoreMetadata for HttpStoreFileMetadata {
 /// Reader for streaming bytes from a remote HTTP file.
 pub struct HttpStoreFileReader {
     stream: Pin<Box<dyn Stream<Item = reqwest::Result<Bytes>> + std::marker::Send>>,
+}
+
+impl std::fmt::Debug for HttpStoreFileReader {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct(stringify!(HttpStoreFileReader))
+            .finish_non_exhaustive()
+    }
 }
 
 impl HttpStoreFileReader {

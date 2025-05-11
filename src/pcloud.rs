@@ -33,6 +33,7 @@ impl std::fmt::Debug for Credentials {
 }
 
 /// A store backed by the pCloud remote storage service.
+#[derive(Clone)]
 pub struct PCloudStore(Arc<pcloud::Client>);
 
 impl std::fmt::Debug for PCloudStore {
@@ -132,6 +133,15 @@ pub struct PCloudStoreDirectoryReader {
     store: Arc<pcloud::Client>,
     path: PathBuf,
     entries: Vec<pcloud::entry::Entry>,
+}
+
+impl std::fmt::Debug for PCloudStoreDirectoryReader {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct(stringify!(PCloudStoreDirectoryReader))
+            .field("path", &self.path)
+            .field("entries", &self.entries)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Stream for PCloudStoreDirectoryReader {
@@ -343,6 +353,7 @@ impl tokio::io::AsyncWrite for PCloudStoreFileWriter {
 impl crate::StoreFileWriter for PCloudStoreFileWriter {}
 
 /// Metadata for a file in the pCloud store.
+#[derive(Clone, Debug)]
 pub struct PCloudStoreFileMetadata {
     size: u64,
     created: u64,
