@@ -14,6 +14,17 @@ pub enum AnyStoreConfig {
     PCloud(crate::pcloud::PCloudStoreConfig),
 }
 
+impl AnyStoreConfig {
+    /// Create a [`AnyStore`] based on the configuration
+    pub fn build(&self) -> std::io::Result<AnyStore> {
+        match self {
+            Self::Http(inner) => inner.build().map(AnyStore::Http),
+            Self::Local(inner) => inner.build().map(AnyStore::Local),
+            Self::PCloud(inner) => inner.build().map(AnyStore::PCloud),
+        }
+    }
+}
+
 #[derive(Clone, Debug, derive_more::From)]
 pub enum AnyStore {
     Http(crate::http::HttpStore),
