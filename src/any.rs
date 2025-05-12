@@ -112,6 +112,14 @@ impl crate::StoreFile for AnyStoreFile {
             Self::PCloud(inner) => inner.write(options).await.map(AnyStoreFileWriter::PCloud),
         }
     }
+
+    async fn delete(&self) -> Result<()> {
+        match self {
+            Self::Http(inner) => inner.delete().await,
+            Self::Local(inner) => inner.delete().await,
+            Self::PCloud(inner) => inner.delete().await,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -236,6 +244,22 @@ impl crate::StoreDirectory for AnyStoreDirectory {
             Self::Http(inner) => inner.read().await.map(AnyStoreDirectoryReader::Http),
             Self::Local(inner) => inner.read().await.map(AnyStoreDirectoryReader::Local),
             Self::PCloud(inner) => inner.read().await.map(AnyStoreDirectoryReader::PCloud),
+        }
+    }
+
+    async fn delete(&self) -> Result<()> {
+        match self {
+            Self::Http(inner) => inner.delete().await,
+            Self::Local(inner) => inner.delete().await,
+            Self::PCloud(inner) => inner.delete().await,
+        }
+    }
+
+    async fn delete_recursive(&self) -> Result<()> {
+        match self {
+            Self::Http(inner) => inner.delete_recursive().await,
+            Self::Local(inner) => inner.delete_recursive().await,
+            Self::PCloud(inner) => inner.delete_recursive().await,
         }
     }
 }

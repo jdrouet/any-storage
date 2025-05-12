@@ -166,6 +166,38 @@ impl crate::StoreDirectory for PCloudStoreDirectory {
             Err(other) => Err(Error::other(other)),
         }
     }
+
+    async fn delete(&self) -> Result<()> {
+        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let identifier = FolderIdentifier::path(path.to_string_lossy());
+        match self.store.client.delete_folder(identifier).await {
+            Ok(_) => Ok(()),
+            Err(pcloud::Error::Protocol(2005, _)) => {
+                Err(Error::new(ErrorKind::NotFound, "directory not found"))
+            }
+            Err(pcloud::Error::Protocol(2006, _)) => Err(Error::new(
+                ErrorKind::DirectoryNotEmpty,
+                "directory not empty",
+            )),
+            Err(other) => Err(Error::other(other)),
+        }
+    }
+
+    async fn delete_recursive(&self) -> Result<()> {
+        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let identifier = FolderIdentifier::path(path.to_string_lossy());
+        match self.store.client.delete_folder_recursive(identifier).await {
+            Ok(_) => Ok(()),
+            Err(pcloud::Error::Protocol(2005, _)) => {
+                Err(Error::new(ErrorKind::NotFound, "directory not found"))
+            }
+            Err(pcloud::Error::Protocol(2006, _)) => Err(Error::new(
+                ErrorKind::DirectoryNotEmpty,
+                "directory not empty",
+            )),
+            Err(other) => Err(Error::other(other)),
+        }
+    }
 }
 
 /// A streaming reader over entries in a pCloud directory.
@@ -352,6 +384,22 @@ impl crate::StoreFile for PCloudStoreFile {
             write_buffer,
             upload_task,
         })
+    }
+
+    async fn delete(&self) -> Result<()> {
+        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let identifier = FileIdentifier::path(path.to_string_lossy());
+        self.store
+            .client
+            .delete_file(identifier)
+            .await
+            .map(|_| ())
+            .map_err(|err| match err {
+                pcloud::Error::Protocol(2009, _) => {
+                    Error::new(ErrorKind::NotFound, "file not found")
+                }
+                other => Error::other(other),
+            })
     }
 }
 

@@ -127,6 +127,14 @@ impl StoreDirectory for LocalStoreDirectory {
                 inner: Box::pin(value),
             })
     }
+
+    fn delete(&self) -> impl Future<Output = Result<()>> {
+        tokio::fs::remove_dir(&self.path)
+    }
+
+    fn delete_recursive(&self) -> impl Future<Output = Result<()>> {
+        tokio::fs::remove_dir_all(&self.path)
+    }
 }
 
 /// Reader for streaming entries from a local store directory.
@@ -267,6 +275,10 @@ impl StoreFile for LocalStoreFile {
             _ => {}
         };
         Ok(LocalStoreFileWriter(file))
+    }
+
+    async fn delete(&self) -> Result<()> {
+        tokio::fs::remove_file(&self.path).await
     }
 }
 

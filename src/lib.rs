@@ -64,6 +64,14 @@ pub trait StoreDirectory {
     ///
     /// Returns a future that resolves to a reader for the directory's entries.
     fn read(&self) -> impl Future<Output = Result<Self::Reader>>;
+
+    /// Deletes a directory if empty
+    ///
+    /// Should return an error if not empty
+    fn delete(&self) -> impl Future<Output = Result<()>>;
+
+    /// Deletes a directory and its content
+    fn delete_recursive(&self) -> impl Future<Output = Result<()>>;
 }
 
 /// Trait for a reader that streams entries from a directory.
@@ -104,6 +112,9 @@ pub trait StoreFile {
 
     /// Creates a writer
     fn write(&self, options: WriteOptions) -> impl Future<Output = Result<Self::FileWriter>>;
+
+    /// Deletes the file
+    fn delete(&self) -> impl Future<Output = Result<()>>;
 }
 
 #[derive(Clone, Copy, Debug)]

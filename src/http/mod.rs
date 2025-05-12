@@ -196,6 +196,20 @@ impl crate::StoreDirectory for HttpStoreDirectory {
             entries,
         })
     }
+
+    async fn delete(&self) -> Result<()> {
+        Err(Error::new(
+            ErrorKind::Unsupported,
+            "http store doesn't support write operations",
+        ))
+    }
+
+    async fn delete_recursive(&self) -> Result<()> {
+        Err(Error::new(
+            ErrorKind::Unsupported,
+            "http store doesn't support write operations",
+        ))
+    }
 }
 
 /// Stream reader over entries within an HTTP directory listing.
@@ -321,6 +335,13 @@ impl crate::StoreFile for HttpStoreFile {
     }
 
     async fn write(&self, _options: crate::WriteOptions) -> Result<Self::FileWriter> {
+        Err(Error::new(
+            ErrorKind::Unsupported,
+            "http store doesn't support write operations",
+        ))
+    }
+
+    async fn delete(&self) -> Result<()> {
         Err(Error::new(
             ErrorKind::Unsupported,
             "http store doesn't support write operations",
