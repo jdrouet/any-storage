@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["PCloudStoreConfigOrigin"],"struct":["PCloudStore","PCloudStoreConfig","PCloudStoreDirectory","PCloudStoreDirectoryReader","PCloudStoreFile","PCloudStoreFileMetadata","PCloudStoreFileWriter"],"type":["PCloudStoreEntry","PCloudStoreFileReader"]};

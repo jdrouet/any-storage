@@ -1,0 +1,67 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Virtual FileStore Abstraction for different Backends"><title>any_storage - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="any_storage" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../static.files/storage-3a5871a4.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../any_storage/index.html">any_<wbr>storage</a><span class="version">0.2.2</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#virtual-filestore-abstraction-for-different-backends" title="Virtual FileStore Abstraction for different Backends">Virtual FileStore Abstraction for different Backends</a><ul><li><a href="#-features" title="✨ Features">✨ Features</a></li><li><a href="#-available-backends" title="📦 Available Backends">📦 Available Backends</a></li><li><a href="#-backends-support" title="✨ Backends Support">✨ Backends Support</a></li><li><a href="#-usage-example" title="🔧 Usage Example">🔧 Usage Example</a></li><li><a href="#-architecture" title="📚 Architecture">📚 Architecture</a></li><li><a href="#-security-notes" title="🔐 Security Notes">🔐 Security Notes</a></li><li><a href="#-crate-status" title="📦 Crate Status">📦 Crate Status</a></li><li><a href="#-todo--roadmap" title="🚧 TODO / Roadmap">🚧 TODO / Roadmap</a></li></ul></li></ul><h3><a href="#modules">Crate Items</a></h3><ul class="block"><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#enums" title="Enums">Enums</a></li><li><a href="#traits" title="Traits">Traits</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>any_storage</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/any_storage/lib.rs.html#1-264">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="virtual-filestore-abstraction-for-different-backends"><a class="doc-anchor" href="#virtual-filestore-abstraction-for-different-backends">§</a>Virtual FileStore Abstraction for different Backends</h2>
+<p>This crate provides a unified async abstraction over multiple file storage backends,
+enabling consistent access to files and directories whether they are located on the
+local filesystem, an HTTP file index, or any other cloud storage service.</p>
+<h3 id="-features"><a class="doc-anchor" href="#-features">§</a>✨ Features</h3>
+<ul>
+<li><strong>Unified <code>Store</code> Trait</strong>: A common trait for file and directory access across storage backends.</li>
+<li><strong>Streaming Reads and Writes</strong>: All file reads and writes are implemented using <code>tokio::io::AsyncRead</code> and <code>tokio::io::AsyncWrite</code> for efficient streaming.</li>
+<li><strong>Range Requests</strong>: HTTP and pCloud support partial reads using byte-range headers.</li>
+<li><strong>Metadata Support</strong>: Each backend provides basic file metadata such as size, creation, and modification time.</li>
+<li><strong>Pluggable Backends</strong>: Easily extendable to support additional services like S3, FTP, or Dropbox.</li>
+</ul>
+<h3 id="-available-backends"><a class="doc-anchor" href="#-available-backends">§</a>📦 Available Backends</h3><h4 id="-localstore"><a class="doc-anchor" href="#-localstore">§</a>✅ <code>LocalStore</code></h4>
+<ul>
+<li>Accesses files and directories directly from the local filesystem.</li>
+</ul>
+<h4 id="-httpstore"><a class="doc-anchor" href="#-httpstore">§</a>🌐 <code>HttpStore</code></h4>
+<ul>
+<li>Reads from public HTTP directories using HTML parsing (for Apache/Nginx-style listings).</li>
+</ul>
+<h4 id="-pcloudstore"><a class="doc-anchor" href="#-pcloudstore">§</a>☁️ <code>PCloudStore</code></h4>
+<ul>
+<li>Authenticates using username/password and reads from a pCloud account.</li>
+</ul>
+<h3 id="-backends-support"><a class="doc-anchor" href="#-backends-support">§</a>✨ Backends Support</h3><div><table><thead><tr><th style="text-align: center">Backend</th><th style="text-align: center">Read</th><th style="text-align: center">Read partial</th><th style="text-align: center">Write</th><th style="text-align: center">Write partial (append)</th></tr></thead><tbody>
+<tr><td style="text-align: center">Local</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td style="text-align: center">Http</td><td style="text-align: center">✅</td><td style="text-align: center">❔ (depends on server)</td><td style="text-align: center">🚫</td><td style="text-align: center">🚫</td></tr>
+<tr><td style="text-align: center">PCoud</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">🚫</td></tr>
+</tbody></table>
+</div><h3 id="-usage-example"><a class="doc-anchor" href="#-usage-example">§</a>🔧 Usage Example</h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>any_storage::{Store, StoreFile};
+<span class="kw">use </span>any_storage::local::LocalStore;
+
+<span class="attr">#[tokio::main]
+</span><span class="kw">async fn </span>main() -&gt; std::io::Result&lt;()&gt; {
+    <span class="kw">let </span>store = LocalStore::new(<span class="string">"/some/base/path"</span>);
+    <span class="kw">let </span>file = store.get_file(<span class="string">"file.txt"</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>reader = file.read(..).<span class="kw">await</span><span class="question-mark">?</span>;
+    tokio::io::copy(<span class="kw-2">&amp;mut </span>reader, <span class="kw-2">&amp;mut </span>tokio::io::stdout()).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div>
+<h3 id="-architecture"><a class="doc-anchor" href="#-architecture">§</a>📚 Architecture</h3>
+<ul>
+<li><code>Store</code>: Main trait for fetching files and directories.</li>
+<li><code>StoreFile</code> and <code>StoreDirectory</code>: Trait abstractions for files and folders.</li>
+<li><code>StoreFileReader</code>: Async stream wrapper over file content.</li>
+<li><code>StoreFileWriter</code>: Async stream wrapper to write to a file.</li>
+<li>Each backend implements these traits for its own types, hiding service-specific logic behind the unified interface.</li>
+</ul>
+<h3 id="-security-notes"><a class="doc-anchor" href="#-security-notes">§</a>🔐 Security Notes</h3>
+<ul>
+<li>Credentials for <code>PCloudStore</code> must be managed securely; currently supports username/password only.</li>
+<li>HTTP support is read-only and assumes publicly exposed directory indexes.</li>
+</ul>
+<h3 id="-crate-status"><a class="doc-anchor" href="#-crate-status">§</a>📦 Crate Status</h3>
+<ul>
+<li>Written in Rust 2024 Edition</li>
+<li>Async-first design, built on top of <code>tokio</code>, <code>reqwest</code>, <code>futures</code>, and <code>bytes</code>.</li>
+</ul>
+<h3 id="-todo--roadmap"><a class="doc-anchor" href="#-todo--roadmap">§</a>🚧 TODO / Roadmap</h3>
+<ul>
+<li>Delete support</li>
+<li>More backends (S3, google drive, proton drive, etc)</li>
+</ul>
+</div></details><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="any/index.html" title="mod any_storage::any">any</a></dt><dd>Module wrapping all the implementations in an enum.</dd><dt><a class="mod" href="http/index.html" title="mod any_storage::http">http</a></dt><dd>Module for HTTP storage implementation.</dd><dt><a class="mod" href="local/index.html" title="mod any_storage::local">local</a></dt><dd>Module for local storage implementation.</dd><dt><a class="mod" href="pcloud/index.html" title="mod any_storage::pcloud">pcloud</a></dt><dd>Module for pCloud storage implementation.</dd></dl><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.NoopFileWriter.html" title="struct any_storage::NoopFileWriter">Noop<wbr>File<wbr>Writer</a></dt><dd>Struct for stores that don’t support writing</dd><dt><a class="struct" href="struct.WriteOptions.html" title="struct any_storage::WriteOptions">Write<wbr>Options</a></dt></dl><h2 id="enums" class="section-header">Enums<a href="#enums" class="anchor">§</a></h2><dl class="item-table"><dt><a class="enum" href="enum.Entry.html" title="enum any_storage::Entry">Entry</a></dt><dd>Enum representing either a file or a directory entry.</dd></dl><h2 id="traits" class="section-header">Traits<a href="#traits" class="anchor">§</a></h2><dl class="item-table"><dt><a class="trait" href="trait.Store.html" title="trait any_storage::Store">Store</a></dt><dd>Trait representing a generic storage system.</dd><dt><a class="trait" href="trait.StoreDirectory.html" title="trait any_storage::StoreDirectory">Store<wbr>Directory</a></dt><dd>Trait representing a directory in the storage system.</dd><dt><a class="trait" href="trait.StoreDirectoryReader.html" title="trait any_storage::StoreDirectoryReader">Store<wbr>Directory<wbr>Reader</a></dt><dd>Trait for a reader that streams entries from a directory.</dd><dt><a class="trait" href="trait.StoreFile.html" title="trait any_storage::StoreFile">Store<wbr>File</a></dt><dd>Trait representing a file in the storage system.</dd><dt><a class="trait" href="trait.StoreFileReader.html" title="trait any_storage::StoreFileReader">Store<wbr>File<wbr>Reader</a></dt><dd>Trait representing a reader that can asynchronously read the contents of a
+file.</dd><dt><a class="trait" href="trait.StoreFileWriter.html" title="trait any_storage::StoreFileWriter">Store<wbr>File<wbr>Writer</a></dt><dd>Trait representing a writer that can asynchronously write the contents to a
+file.</dd><dt><a class="trait" href="trait.StoreMetadata.html" title="trait any_storage::StoreMetadata">Store<wbr>Metadata</a></dt><dd>Trait representing the metadata of a file.</dd></dl></section></div></main></body></html>

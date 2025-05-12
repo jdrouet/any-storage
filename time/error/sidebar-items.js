@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Error","Parse","ParseFromDescription","TryFromParsed"],"struct":["ComponentRange","ConversionRange","DifferentVariant","InvalidVariant"]};

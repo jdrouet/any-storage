@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["HttpStore","HttpStoreConfig","HttpStoreDirectory","HttpStoreDirectoryReader","HttpStoreFile","HttpStoreFileMetadata","HttpStoreFileReader"],"type":["HttpStoreEntry"]};

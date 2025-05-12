@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["EU_REGION","US_REGION"],"enum":["Credentials","Error","Region"],"mod":["builder","entry","file","folder","general","stream"],"struct":["Client"],"type":["Result"]};

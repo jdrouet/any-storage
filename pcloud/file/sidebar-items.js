@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["FileIdentifier"],"mod":["checksum","delete","movefile","rename","upload"],"struct":["File","FileResponse"]};

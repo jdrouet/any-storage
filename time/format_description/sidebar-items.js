@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["BorrowedFormatItem","Component"],"mod":["modifier","well_known"]};

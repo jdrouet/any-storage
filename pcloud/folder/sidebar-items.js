@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ROOT"],"enum":["FolderIdentifier"],"mod":["create","delete","list","movefolder","rename"],"struct":["Folder"]};

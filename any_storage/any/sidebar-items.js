@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["AnyStore","AnyStoreConfig","AnyStoreDirectory","AnyStoreDirectoryReader","AnyStoreFile","AnyStoreFileMetadata","AnyStoreFileReader","AnyStoreFileWriter"],"type":["AnyStoreEntry"]};
