@@ -11,6 +11,7 @@ use futures::StreamExt;
 pub enum AnyStoreConfig {
     Http(crate::http::HttpStoreConfig),
     Local(crate::local::LocalStoreConfig),
+    Noop(crate::noop::NoopStoreConfig),
     PCloud(crate::pcloud::PCloudStoreConfig),
 }
 
@@ -20,6 +21,7 @@ impl AnyStoreConfig {
         match self {
             Self::Http(inner) => inner.build().map(AnyStore::Http),
             Self::Local(inner) => inner.build().map(AnyStore::Local),
+            Self::Noop(inner) => inner.build().map(AnyStore::Noop),
             Self::PCloud(inner) => inner.build().map(AnyStore::PCloud),
         }
     }
@@ -29,6 +31,7 @@ impl AnyStoreConfig {
 pub enum AnyStore {
     Http(crate::http::HttpStore),
     Local(crate::local::LocalStore),
+    Noop(crate::noop::NoopStore),
     PCloud(crate::pcloud::PCloudStore),
 }
 
@@ -40,6 +43,7 @@ impl crate::Store for AnyStore {
         match self {
             Self::Http(inner) => inner.root().await.map(AnyStoreDirectory::Http),
             Self::Local(inner) => inner.root().await.map(AnyStoreDirectory::Local),
+            Self::Noop(inner) => inner.root().await.map(AnyStoreDirectory::Noop),
             Self::PCloud(inner) => inner.root().await.map(AnyStoreDirectory::PCloud),
         }
     }
@@ -48,6 +52,7 @@ impl crate::Store for AnyStore {
         match self {
             Self::Http(inner) => inner.get_dir(path).await.map(AnyStoreDirectory::Http),
             Self::Local(inner) => inner.get_dir(path).await.map(AnyStoreDirectory::Local),
+            Self::Noop(inner) => inner.get_dir(path).await.map(AnyStoreDirectory::Noop),
             Self::PCloud(inner) => inner.get_dir(path).await.map(AnyStoreDirectory::PCloud),
         }
     }
@@ -56,6 +61,7 @@ impl crate::Store for AnyStore {
         match self {
             Self::Http(inner) => inner.get_file(path).await.map(AnyStoreFile::Http),
             Self::Local(inner) => inner.get_file(path).await.map(AnyStoreFile::Local),
+            Self::Noop(inner) => inner.get_file(path).await.map(AnyStoreFile::Noop),
             Self::PCloud(inner) => inner.get_file(path).await.map(AnyStoreFile::PCloud),
         }
     }
@@ -65,6 +71,7 @@ impl crate::Store for AnyStore {
 pub enum AnyStoreFile {
     Http(crate::http::HttpStoreFile),
     Local(crate::local::LocalStoreFile),
+    Noop(crate::noop::NoopStoreFile),
     PCloud(crate::pcloud::PCloudStoreFile),
 }
 
@@ -77,6 +84,7 @@ impl crate::StoreFile for AnyStoreFile {
         match self {
             Self::Http(inner) => inner.exists().await,
             Self::Local(inner) => inner.exists().await,
+            Self::Noop(inner) => inner.exists().await,
             Self::PCloud(inner) => inner.exists().await,
         }
     }
@@ -85,6 +93,7 @@ impl crate::StoreFile for AnyStoreFile {
         match self {
             Self::Http(inner) => inner.filename(),
             Self::Local(inner) => inner.filename(),
+            Self::Noop(inner) => inner.filename(),
             Self::PCloud(inner) => inner.filename(),
         }
     }
@@ -93,6 +102,7 @@ impl crate::StoreFile for AnyStoreFile {
         match self {
             Self::Http(inner) => inner.metadata().await.map(AnyStoreFileMetadata::Http),
             Self::Local(inner) => inner.metadata().await.map(AnyStoreFileMetadata::Local),
+            Self::Noop(inner) => inner.metadata().await.map(AnyStoreFileMetadata::Noop),
             Self::PCloud(inner) => inner.metadata().await.map(AnyStoreFileMetadata::PCloud),
         }
     }
@@ -101,6 +111,7 @@ impl crate::StoreFile for AnyStoreFile {
         match self {
             Self::Http(inner) => inner.read(range).await.map(AnyStoreFileReader::Http),
             Self::Local(inner) => inner.read(range).await.map(AnyStoreFileReader::Local),
+            Self::Noop(inner) => inner.read(range).await.map(AnyStoreFileReader::Noop),
             Self::PCloud(inner) => inner.read(range).await.map(AnyStoreFileReader::PCloud),
         }
     }
@@ -109,6 +120,7 @@ impl crate::StoreFile for AnyStoreFile {
         match self {
             Self::Http(inner) => inner.write(options).await.map(AnyStoreFileWriter::Http),
             Self::Local(inner) => inner.write(options).await.map(AnyStoreFileWriter::Local),
+            Self::Noop(inner) => inner.write(options).await.map(AnyStoreFileWriter::Noop),
             Self::PCloud(inner) => inner.write(options).await.map(AnyStoreFileWriter::PCloud),
         }
     }
@@ -117,6 +129,7 @@ impl crate::StoreFile for AnyStoreFile {
         match self {
             Self::Http(inner) => inner.delete().await,
             Self::Local(inner) => inner.delete().await,
+            Self::Noop(inner) => inner.delete().await,
             Self::PCloud(inner) => inner.delete().await,
         }
     }
@@ -126,6 +139,7 @@ impl crate::StoreFile for AnyStoreFile {
 pub enum AnyStoreFileReader {
     Http(crate::http::HttpStoreFileReader),
     Local(crate::local::LocalStoreFileReader),
+    Noop(crate::noop::NoopStoreFileReader),
     PCloud(crate::pcloud::PCloudStoreFileReader),
 }
 
@@ -139,6 +153,7 @@ impl tokio::io::AsyncRead for AnyStoreFileReader {
         match this {
             Self::Http(inner) => Pin::new(inner).poll_read(cx, buf),
             Self::Local(inner) => Pin::new(inner).poll_read(cx, buf),
+            Self::Noop(inner) => Pin::new(inner).poll_read(cx, buf),
             Self::PCloud(inner) => Pin::new(inner).poll_read(cx, buf),
         }
     }
@@ -150,6 +165,7 @@ impl crate::StoreFileReader for AnyStoreFileReader {}
 pub enum AnyStoreFileMetadata {
     Http(crate::http::HttpStoreFileMetadata),
     Local(crate::local::LocalStoreFileMetadata),
+    Noop(crate::noop::NoopStoreFileMetadata),
     PCloud(crate::pcloud::PCloudStoreFileMetadata),
 }
 
@@ -158,6 +174,7 @@ impl crate::StoreMetadata for AnyStoreFileMetadata {
         match self {
             Self::Http(inner) => inner.created(),
             Self::Local(inner) => inner.created(),
+            Self::Noop(inner) => inner.created(),
             Self::PCloud(inner) => inner.created(),
         }
     }
@@ -166,6 +183,7 @@ impl crate::StoreMetadata for AnyStoreFileMetadata {
         match self {
             Self::Http(inner) => inner.modified(),
             Self::Local(inner) => inner.modified(),
+            Self::Noop(inner) => inner.modified(),
             Self::PCloud(inner) => inner.modified(),
         }
     }
@@ -174,6 +192,7 @@ impl crate::StoreMetadata for AnyStoreFileMetadata {
         match self {
             Self::Http(inner) => inner.size(),
             Self::Local(inner) => inner.size(),
+            Self::Noop(inner) => inner.size(),
             Self::PCloud(inner) => inner.size(),
         }
     }
@@ -181,7 +200,8 @@ impl crate::StoreMetadata for AnyStoreFileMetadata {
 
 #[derive(Debug)]
 pub enum AnyStoreFileWriter {
-    Http(crate::NoopFileWriter),
+    Http(crate::noop::NoopStoreFileWriter),
+    Noop(crate::noop::NoopStoreFileWriter),
     Local(crate::local::LocalStoreFileWriter),
     PCloud(crate::pcloud::PCloudStoreFileWriter),
 }
@@ -191,7 +211,7 @@ impl tokio::io::AsyncWrite for AnyStoreFileWriter {
         let this = self.get_mut();
 
         match this {
-            Self::Http(inner) => Pin::new(inner).poll_write(cx, buf),
+            Self::Http(inner) | Self::Noop(inner) => Pin::new(inner).poll_write(cx, buf),
             Self::Local(inner) => Pin::new(inner).poll_write(cx, buf),
             Self::PCloud(inner) => Pin::new(inner).poll_write(cx, buf),
         }
@@ -201,7 +221,7 @@ impl tokio::io::AsyncWrite for AnyStoreFileWriter {
         let this = self.get_mut();
 
         match this {
-            Self::Http(inner) => Pin::new(inner).poll_flush(cx),
+            Self::Http(inner) | Self::Noop(inner) => Pin::new(inner).poll_flush(cx),
             Self::Local(inner) => Pin::new(inner).poll_flush(cx),
             Self::PCloud(inner) => Pin::new(inner).poll_flush(cx),
         }
@@ -211,7 +231,7 @@ impl tokio::io::AsyncWrite for AnyStoreFileWriter {
         let this = self.get_mut();
 
         match this {
-            Self::Http(inner) => Pin::new(inner).poll_shutdown(cx),
+            Self::Http(inner) | Self::Noop(inner) => Pin::new(inner).poll_shutdown(cx),
             Self::Local(inner) => Pin::new(inner).poll_shutdown(cx),
             Self::PCloud(inner) => Pin::new(inner).poll_shutdown(cx),
         }
@@ -224,6 +244,7 @@ impl crate::StoreFileWriter for AnyStoreFileWriter {}
 pub enum AnyStoreDirectory {
     Http(crate::http::HttpStoreDirectory),
     Local(crate::local::LocalStoreDirectory),
+    Noop(crate::noop::NoopStoreDirectory),
     PCloud(crate::pcloud::PCloudStoreDirectory),
 }
 
@@ -235,6 +256,7 @@ impl crate::StoreDirectory for AnyStoreDirectory {
         match self {
             Self::Http(inner) => inner.exists().await,
             Self::Local(inner) => inner.exists().await,
+            Self::Noop(inner) => inner.exists().await,
             Self::PCloud(inner) => inner.exists().await,
         }
     }
@@ -243,6 +265,7 @@ impl crate::StoreDirectory for AnyStoreDirectory {
         match self {
             Self::Http(inner) => inner.read().await.map(AnyStoreDirectoryReader::Http),
             Self::Local(inner) => inner.read().await.map(AnyStoreDirectoryReader::Local),
+            Self::Noop(inner) => inner.read().await.map(AnyStoreDirectoryReader::Noop),
             Self::PCloud(inner) => inner.read().await.map(AnyStoreDirectoryReader::PCloud),
         }
     }
@@ -251,6 +274,7 @@ impl crate::StoreDirectory for AnyStoreDirectory {
         match self {
             Self::Http(inner) => inner.delete().await,
             Self::Local(inner) => inner.delete().await,
+            Self::Noop(inner) => inner.delete().await,
             Self::PCloud(inner) => inner.delete().await,
         }
     }
@@ -259,6 +283,7 @@ impl crate::StoreDirectory for AnyStoreDirectory {
         match self {
             Self::Http(inner) => inner.delete_recursive().await,
             Self::Local(inner) => inner.delete_recursive().await,
+            Self::Noop(inner) => inner.delete_recursive().await,
             Self::PCloud(inner) => inner.delete_recursive().await,
         }
     }
@@ -285,6 +310,15 @@ impl From<crate::local::LocalStoreEntry> for AnyStoreEntry {
     }
 }
 
+impl From<crate::noop::NoopStoreEntry> for AnyStoreEntry {
+    fn from(value: crate::noop::NoopStoreEntry) -> Self {
+        match value {
+            crate::Entry::File(file) => crate::Entry::File(file.into()),
+            crate::Entry::Directory(directory) => crate::Entry::Directory(directory.into()),
+        }
+    }
+}
+
 impl From<crate::pcloud::PCloudStoreEntry> for AnyStoreEntry {
     fn from(value: crate::pcloud::PCloudStoreEntry) -> Self {
         match value {
@@ -298,6 +332,7 @@ impl From<crate::pcloud::PCloudStoreEntry> for AnyStoreEntry {
 pub enum AnyStoreDirectoryReader {
     Http(crate::http::HttpStoreDirectoryReader),
     Local(crate::local::LocalStoreDirectoryReader),
+    Noop(crate::noop::NoopStoreDirectoryReader),
     PCloud(crate::pcloud::PCloudStoreDirectoryReader),
 }
 
@@ -323,6 +358,7 @@ impl futures::Stream for AnyStoreDirectoryReader {
         match self.get_mut() {
             Self::Http(inner) => from_poll_entry(inner.poll_next_unpin(cx)),
             Self::Local(inner) => from_poll_entry(inner.poll_next_unpin(cx)),
+            Self::Noop(inner) => from_poll_entry(inner.poll_next_unpin(cx)),
             Self::PCloud(inner) => from_poll_entry(inner.poll_next_unpin(cx)),
         }
     }

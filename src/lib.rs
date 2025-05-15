@@ -13,6 +13,8 @@ pub mod any;
 pub mod http;
 /// Module for local storage implementation.
 pub mod local;
+/// Module for noop storage implementation.
+pub mod noop;
 /// Module for pCloud storage implementation.
 pub mod pcloud;
 
@@ -155,45 +157,6 @@ pub trait StoreFileReader: tokio::io::AsyncRead {}
 /// Trait representing a writer that can asynchronously write the contents to a
 /// file.
 pub trait StoreFileWriter: tokio::io::AsyncWrite {}
-
-/// Struct for stores that don't support writing
-#[derive(Debug)]
-pub struct NoopFileWriter;
-
-impl StoreFileWriter for NoopFileWriter {}
-
-impl tokio::io::AsyncWrite for NoopFileWriter {
-    fn poll_flush(
-        self: std::pin::Pin<&mut Self>,
-        _cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<std::result::Result<(), std::io::Error>> {
-        std::task::Poll::Ready(Err(std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            "writer not supported for this store",
-        )))
-    }
-
-    fn poll_shutdown(
-        self: std::pin::Pin<&mut Self>,
-        _cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<std::result::Result<(), std::io::Error>> {
-        std::task::Poll::Ready(Err(std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            "writer not supported for this store",
-        )))
-    }
-
-    fn poll_write(
-        self: std::pin::Pin<&mut Self>,
-        _cx: &mut std::task::Context<'_>,
-        _buf: &[u8],
-    ) -> std::task::Poll<std::result::Result<usize, std::io::Error>> {
-        std::task::Poll::Ready(Err(std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            "writer not supported for this store",
-        )))
-    }
-}
 
 /// Enum representing either a file or a directory entry.
 #[derive(Debug)]
