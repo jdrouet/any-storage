@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Entry"],"mod":["any","http","local","pcloud"],"struct":["NoopFileWriter","WriteOptions"],"trait":["Store","StoreDirectory","StoreDirectoryReader","StoreFile","StoreFileReader","StoreFileWriter","StoreMetadata"]};
+window.SIDEBAR_ITEMS = {"enum":["Entry"],"mod":["any","http","local","noop","pcloud"],"struct":["WriteOptions"],"trait":["Store","StoreDirectory","StoreDirectoryReader","StoreFile","StoreFileReader","StoreFileWriter","StoreMetadata"]};

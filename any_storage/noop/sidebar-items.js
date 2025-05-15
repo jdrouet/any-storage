@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["NoopStore","NoopStoreConfig","NoopStoreDirectory","NoopStoreDirectoryReader","NoopStoreFile","NoopStoreFileMetadata","NoopStoreFileReader","NoopStoreFileWriter"],"type":["NoopStoreEntry"]};
