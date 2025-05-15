@@ -391,3 +391,20 @@ impl futures::Stream for AnyStoreDirectoryReader {
 }
 
 impl crate::StoreDirectoryReader<AnyStoreEntry> for AnyStoreDirectoryReader {}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    #[cfg(feature = "serde")]
+    fn should_parse_config() {
+        let _config: super::AnyStoreConfig = toml::from_str(
+            r#"
+type = "pcloud"
+region = "EU"
+credentials = { username = "username", password = "password" }
+root = "/"
+"#,
+        )
+        .unwrap();
+    }
+}
