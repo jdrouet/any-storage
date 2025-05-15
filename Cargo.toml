@@ -30,4 +30,5 @@ tokio-util = { version = "0.7", features = ["io"] }
 mockito = { version = "1.7" }
 test-case = "3.3.1"
 tokio = { version = "1", features = ["io-std", "macros", "rt-multi-thread"] }
+toml = "0.8.22"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

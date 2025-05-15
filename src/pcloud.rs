@@ -18,6 +18,7 @@ use crate::http::{HttpStoreFileReader, RangeHeader};
 
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum PCloudStoreConfigOrigin {
     Region { region: pcloud::Region },
     Url { url: Cow<'static, str> },
@@ -509,6 +510,19 @@ mod tests {
 
     use super::*;
     use crate::{Store, StoreFile, WriteOptions};
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn should_parse_config() {
+        let _config: super::PCloudStoreConfig = toml::from_str(
+            r#"
+region = "EU"
+credentials = { username = "username", password = "password" }
+root = "/"
+"#,
+        )
+        .unwrap();
+    }
 
     #[tokio::test]
     async fn should_write_file() {

@@ -7,7 +7,7 @@ use futures::StreamExt;
 
 #[derive(Clone, Debug, derive_more::From)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(tag = "type", rename_all = "kebab-case"))]
+#[cfg_attr(feature = "serde", serde(tag = "type", rename_all = "lowercase"))]
 #[non_exhaustive]
 pub enum AnyStoreConfig {
     Http(crate::http::HttpStoreConfig),
