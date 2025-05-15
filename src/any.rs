@@ -8,6 +8,7 @@ use futures::StreamExt;
 #[derive(Clone, Debug, derive_more::From)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type", rename_all = "kebab-case"))]
+#[non_exhaustive]
 pub enum AnyStoreConfig {
     Http(crate::http::HttpStoreConfig),
     Local(crate::local::LocalStoreConfig),
@@ -28,6 +29,7 @@ impl AnyStoreConfig {
 }
 
 #[derive(Clone, Debug, derive_more::From)]
+#[non_exhaustive]
 pub enum AnyStore {
     Http(crate::http::HttpStore),
     Local(crate::local::LocalStore),
@@ -68,6 +70,7 @@ impl crate::Store for AnyStore {
 }
 
 #[derive(Debug, derive_more::From)]
+#[non_exhaustive]
 pub enum AnyStoreFile {
     Http(crate::http::HttpStoreFile),
     Local(crate::local::LocalStoreFile),
@@ -145,6 +148,7 @@ impl crate::StoreFile for AnyStoreFile {
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum AnyStoreFileReader {
     Http(crate::http::HttpStoreFileReader),
     Local(crate::local::LocalStoreFileReader),
@@ -171,6 +175,7 @@ impl tokio::io::AsyncRead for AnyStoreFileReader {
 impl crate::StoreFileReader for AnyStoreFileReader {}
 
 #[derive(Clone, Debug, derive_more::From)]
+#[non_exhaustive]
 pub enum AnyStoreFileMetadata {
     Http(crate::http::HttpStoreFileMetadata),
     Local(crate::local::LocalStoreFileMetadata),
@@ -208,6 +213,7 @@ impl crate::StoreMetadata for AnyStoreFileMetadata {
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum AnyStoreFileWriter {
     Http(crate::noop::NoopStoreFileWriter),
     Noop(crate::noop::NoopStoreFileWriter),
@@ -250,6 +256,7 @@ impl tokio::io::AsyncWrite for AnyStoreFileWriter {
 impl crate::StoreFileWriter for AnyStoreFileWriter {}
 
 #[derive(Debug, derive_more::From)]
+#[non_exhaustive]
 pub enum AnyStoreDirectory {
     Http(crate::http::HttpStoreDirectory),
     Local(crate::local::LocalStoreDirectory),
@@ -347,6 +354,7 @@ impl From<crate::pcloud::PCloudStoreEntry> for AnyStoreEntry {
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum AnyStoreDirectoryReader {
     Http(crate::http::HttpStoreDirectoryReader),
     Local(crate::local::LocalStoreDirectoryReader),
