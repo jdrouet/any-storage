@@ -1,6 +1,14 @@
 use std::io::{Error, ErrorKind, Result};
 use std::path::{Component, Path, PathBuf};
 
+pub fn remove_path_prefix(root: &Path, path: &Path) -> Result<PathBuf> {
+    let clean = clean_path(path)?;
+    clean
+        .strip_prefix(root)
+        .map(|path| path.to_path_buf())
+        .map_err(Error::other)
+}
+
 pub fn merge_path(root: &Path, child: &Path) -> Result<PathBuf> {
     let clean = clean_path(child)?;
     Ok(root.join(clean))

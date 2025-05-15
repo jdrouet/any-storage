@@ -1,7 +1,6 @@
-use std::borrow::Cow;
 use std::io::{Error, ErrorKind, Result};
 use std::ops::RangeBounds;
-use std::path::{Component, PathBuf};
+use std::path::PathBuf;
 use std::pin::Pin;
 use std::task::Poll;
 
@@ -44,13 +43,16 @@ pub type NoopStoreEntry = Entry<NoopStoreFile, NoopStoreDirectory>;
 /// Representation of a directory in the noop store.
 #[derive(Debug)]
 pub struct NoopStoreDirectory {
-    #[allow(unused)]
     path: PathBuf,
 }
 
 impl StoreDirectory for NoopStoreDirectory {
     type Entry = NoopStoreEntry;
     type Reader = NoopStoreDirectoryReader;
+
+    fn path(&self) -> &std::path::Path {
+        &self.path
+    }
 
     async fn exists(&self) -> Result<bool> {
         Ok(false)
@@ -99,16 +101,8 @@ impl StoreFile for NoopStoreFile {
     type FileWriter = NoopStoreFileWriter;
     type Metadata = NoopStoreFileMetadata;
 
-    fn filename(&self) -> Option<Cow<'_, str>> {
-        self.path
-            .components()
-            .rev()
-            .filter_map(|item| match item {
-                Component::Normal(inner) => Some(inner),
-                _ => None,
-            })
-            .next()
-            .map(|value| value.to_string_lossy())
+    fn path(&self) -> &std::path::Path {
+        &self.path
     }
 
     async fn exists(&self) -> Result<bool> {

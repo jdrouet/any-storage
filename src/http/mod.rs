@@ -163,6 +163,10 @@ impl crate::StoreDirectory for HttpStoreDirectory {
     type Entry = HttpStoreEntry;
     type Reader = HttpStoreDirectoryReader;
 
+    fn path(&self) -> &std::path::Path {
+        &self.path
+    }
+
     /// Checks if the HTTP directory exists via a HEAD request.
     async fn exists(&self) -> Result<bool> {
         let url = self.store.get_url(&self.path)?;
@@ -271,10 +275,8 @@ impl crate::StoreFile for HttpStoreFile {
     type FileWriter = crate::noop::NoopStoreFileWriter;
     type Metadata = HttpStoreFileMetadata;
 
-    /// Returns the filename portion of the HTTP path.
-    fn filename(&self) -> Option<Cow<'_, str>> {
-        let cmp = self.path.components().next_back()?;
-        Some(cmp.as_os_str().to_string_lossy())
+    fn path(&self) -> &std::path::Path {
+        &self.path
     }
 
     /// Checks if the HTTP file exists via a HEAD request.

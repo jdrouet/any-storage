@@ -140,6 +140,10 @@ impl crate::StoreDirectory for PCloudStoreDirectory {
     type Entry = PCloudStoreEntry;
     type Reader = PCloudStoreDirectoryReader;
 
+    fn path(&self) -> &std::path::Path {
+        &self.path
+    }
+
     /// Checks if the directory exists on pCloud.
     async fn exists(&self) -> Result<bool> {
         let identifier = FolderIdentifier::path(self.path.to_string_lossy());
@@ -261,10 +265,8 @@ impl crate::StoreFile for PCloudStoreFile {
     type FileWriter = PCloudStoreFileWriter;
     type Metadata = PCloudStoreFileMetadata;
 
-    /// Returns the filename portion of the file's path.
-    fn filename(&self) -> Option<Cow<'_, str>> {
-        let cmp = self.path.components().next_back()?;
-        Some(cmp.as_os_str().to_string_lossy())
+    fn path(&self) -> &std::path::Path {
+        &self.path
     }
 
     /// Checks whether the file exists on pCloud.

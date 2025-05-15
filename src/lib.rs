@@ -56,6 +56,16 @@ pub trait StoreDirectory {
     /// entries.
     type Reader: StoreDirectoryReader<Self::Entry>;
 
+    /// Gives the name of the directory
+    ///
+    /// Returns `None` if root directory
+    fn name(&self) -> Option<Cow<'_, str>> {
+        self.path().file_name().map(|name| name.to_string_lossy())
+    }
+
+    /// Gives the relative path of the directory
+    fn path(&self) -> &std::path::Path;
+
     /// Checks if the directory exists.
     ///
     /// Returns a future that resolves to `true` if the directory exists,
@@ -91,7 +101,12 @@ pub trait StoreFile {
     /// Returns the file's name if it exists.
     ///
     /// This method returns an `Option` containing the file's name.
-    fn filename(&self) -> Option<Cow<'_, str>>;
+    fn filename(&self) -> Option<Cow<'_, str>> {
+        self.path().file_name().map(|name| name.to_string_lossy())
+    }
+
+    /// Gives the relative path of the file.
+    fn path(&self) -> &std::path::Path;
 
     /// Checks if the file exists.
     ///

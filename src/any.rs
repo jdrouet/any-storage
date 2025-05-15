@@ -80,6 +80,15 @@ impl crate::StoreFile for AnyStoreFile {
     type FileWriter = AnyStoreFileWriter;
     type Metadata = AnyStoreFileMetadata;
 
+    fn path(&self) -> &std::path::Path {
+        match self {
+            Self::Http(inner) => inner.path(),
+            Self::Local(inner) => inner.path(),
+            Self::Noop(inner) => inner.path(),
+            Self::PCloud(inner) => inner.path(),
+        }
+    }
+
     async fn exists(&self) -> Result<bool> {
         match self {
             Self::Http(inner) => inner.exists().await,
@@ -251,6 +260,15 @@ pub enum AnyStoreDirectory {
 impl crate::StoreDirectory for AnyStoreDirectory {
     type Entry = AnyStoreEntry;
     type Reader = AnyStoreDirectoryReader;
+
+    fn path(&self) -> &std::path::Path {
+        match self {
+            Self::Http(inner) => inner.path(),
+            Self::Local(inner) => inner.path(),
+            Self::Noop(inner) => inner.path(),
+            Self::PCloud(inner) => inner.path(),
+        }
+    }
 
     async fn exists(&self) -> Result<bool> {
         match self {
