@@ -2,6 +2,8 @@
 name = "any-storage"
 description = "Virtual FileStore Abstraction for different Backends"
 authors = ["Jeremie Drouet <jeremie.drouet@gmail.com>"]
+repository = "https://github.com/jdrouet/any-storage"
+documentation = "https://docs.rs/any-storage/"
 readme = "readme.md"
 license = "MIT OR Apache-2.0"
 version = "0.3.0"
