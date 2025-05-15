@@ -67,5 +67,4 @@ async fn main() -> std::io::Result<()> {
 
 ## 🚧 TODO / Roadmap
 
-- Delete support
 - More backends (S3, google drive, proton drive, etc)
