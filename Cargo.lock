@@ -48,6 +48,7 @@ dependencies = [
  "bytes",
  "derive_more",
  "futures",
+ "mime_guess",
  "mockito",
  "pcloud",
  "percent-encoding",

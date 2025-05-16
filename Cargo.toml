@@ -14,8 +14,11 @@ serde = ["dep:serde"]
 
 [dependencies]
 bytes = "1.10"
-derive_more = { version = "2.0.1", default-features = false, features = ["from"] }
+derive_more = { version = "2.0.1", default-features = false, features = [
+    "from",
+] }
 futures = { version = "0.3", default-features = false }
+mime_guess = { version = "2.0", default-features = false }
 pcloud = { version = "4.0.0-alpha.1", default-features = false }
 percent-encoding = "2.3"
 regex = { version = "1.11" }
@@ -23,7 +26,9 @@ reqwest = { version = "0.12", default-features = false, features = [
     "rustls-tls",
     "stream",
 ] }
-serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
+serde = { version = "1.0", default-features = false, features = [
+    "derive",
+], optional = true }
 time = { version = "0.3", default-features = false, features = ["parsing"] }
 tokio = { version = "1", features = ["fs", "io-util"] }
 tokio-util = { version = "0.7", features = ["io"] }

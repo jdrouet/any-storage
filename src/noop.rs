@@ -144,6 +144,10 @@ impl super::StoreMetadata for NoopStoreFileMetadata {
     fn modified(&self) -> u64 {
         0
     }
+
+    fn content_type(&self) -> Option<&str> {
+        None
+    }
 }
 
 /// Reader for asynchronously reading the contents of a file in the noop store.

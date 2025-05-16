@@ -237,6 +237,11 @@ pub trait StoreMetadata {
 
     /// Returns the last modification timestamp of the file (epoch time).
     fn modified(&self) -> u64;
+
+    /// Returns the content type of the file
+    fn content_type(&self) -> Option<&str> {
+        None
+    }
 }
 
 #[cfg(test)]

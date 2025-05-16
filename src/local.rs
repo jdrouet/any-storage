@@ -228,10 +228,12 @@ impl StoreFile for LocalStoreFile {
             .and_then(|v| v.duration_since(SystemTime::UNIX_EPOCH).ok())
             .map(|d| d.as_secs())
             .unwrap_or(0);
+        let content_type = mime_guess::from_path(&self.path).first_raw();
         Ok(LocalStoreFileMetadata {
             size,
             created,
             modified,
+            content_type,
         })
     }
 
@@ -296,6 +298,7 @@ pub struct LocalStoreFileMetadata {
     size: u64,
     created: u64,
     modified: u64,
+    content_type: Option<&'static str>,
 }
 
 impl super::StoreMetadata for LocalStoreFileMetadata {
@@ -312,6 +315,10 @@ impl super::StoreMetadata for LocalStoreFileMetadata {
     /// Returns the last modification timestamp of the file (epoch time).
     fn modified(&self) -> u64 {
         self.modified
+    }
+
+    fn content_type(&self) -> Option<&str> {
+        self.content_type
     }
 }
 
@@ -462,5 +469,6 @@ mod tests {
         assert!(meta.size > 0);
         assert!(meta.created > 0);
         assert!(meta.modified > 0);
+        assert_eq!(meta.content_type.unwrap(), "text/x-rust");
     }
 }

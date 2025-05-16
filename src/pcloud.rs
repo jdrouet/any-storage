@@ -291,6 +291,7 @@ impl crate::StoreFile for PCloudStoreFile {
                 size: file.metadata.size.unwrap_or(0) as u64,
                 created: file.metadata.base.created.timestamp() as u64,
                 modified: file.metadata.base.modified.timestamp() as u64,
+                content_type: file.metadata.content_type,
             }),
             Err(pcloud::Error::Protocol(2009, _)) => {
                 Err(Error::new(ErrorKind::NotFound, "file not found"))
@@ -461,6 +462,7 @@ pub struct PCloudStoreFileMetadata {
     size: u64,
     created: u64,
     modified: u64,
+    content_type: Option<String>,
 }
 
 impl super::StoreMetadata for PCloudStoreFileMetadata {
@@ -477,6 +479,10 @@ impl super::StoreMetadata for PCloudStoreFileMetadata {
     /// Returns the UNIX timestamp when the file was last modified.
     fn modified(&self) -> u64 {
         self.modified
+    }
+
+    fn content_type(&self) -> Option<&str> {
+        self.content_type.as_deref()
     }
 }
 

@@ -8,7 +8,7 @@ use std::task::Poll;
 
 use bytes::Bytes;
 use futures::{Stream, StreamExt};
-use reqwest::header::{CONTENT_LENGTH, LAST_MODIFIED};
+use reqwest::header::{CONTENT_LENGTH, CONTENT_TYPE, LAST_MODIFIED};
 use reqwest::{StatusCode, Url, header};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc2822;
@@ -319,7 +319,15 @@ impl crate::StoreFile for HttpStoreFile {
             .and_then(|value| OffsetDateTime::parse(value, &Rfc2822).ok())
             .map(|dt| dt.unix_timestamp() as u64)
             .unwrap_or(0);
-        Ok(HttpStoreFileMetadata { size, modified })
+        let content_type = res
+            .headers()
+            .get(CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok().map(String::from));
+        Ok(HttpStoreFileMetadata {
+            size,
+            modified,
+            content_type,
+        })
     }
 
     /// Begins reading a file from the HTTP store for the given byte range.
@@ -356,6 +364,7 @@ impl crate::StoreFile for HttpStoreFile {
 pub struct HttpStoreFileMetadata {
     size: u64,
     modified: u64,
+    content_type: Option<String>,
 }
 
 impl super::StoreMetadata for HttpStoreFileMetadata {
@@ -372,6 +381,10 @@ impl super::StoreMetadata for HttpStoreFileMetadata {
     /// Returns the last modified time (as a UNIX timestamp).
     fn modified(&self) -> u64 {
         self.modified
+    }
+
+    fn content_type(&self) -> Option<&str> {
+        self.content_type.as_deref()
     }
 }
 

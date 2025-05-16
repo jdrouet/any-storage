@@ -210,6 +210,15 @@ impl crate::StoreMetadata for AnyStoreFileMetadata {
             Self::PCloud(inner) => inner.size(),
         }
     }
+
+    fn content_type(&self) -> Option<&str> {
+        match self {
+            Self::Http(inner) => inner.content_type(),
+            Self::Local(inner) => inner.content_type(),
+            Self::Noop(inner) => inner.content_type(),
+            Self::PCloud(inner) => inner.content_type(),
+        }
+    }
 }
 
 #[derive(Debug)]
