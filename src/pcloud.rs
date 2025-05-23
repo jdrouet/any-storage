@@ -147,7 +147,8 @@ impl crate::StoreDirectory for PCloudStoreDirectory {
 
     /// Checks if the directory exists on pCloud.
     async fn exists(&self) -> Result<bool> {
-        let identifier = FolderIdentifier::path(self.path.to_string_lossy());
+        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let identifier = FolderIdentifier::path(path.to_string_lossy());
         match self.store.client.list_folder(identifier).await {
             Ok(_) => Ok(true),
             Err(pcloud::Error::Protocol(2005, _)) => Ok(false),
