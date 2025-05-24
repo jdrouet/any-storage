@@ -9,28 +9,32 @@
 <a href=#9 id=9 data-nosnippet>9</a>        .map_err(Error::other)
 <a href=#10 id=10 data-nosnippet>10</a>}
 <a href=#11 id=11 data-nosnippet>11</a>
-<a href=#12 id=12 data-nosnippet>12</a><span class="kw">pub fn </span>merge_path(root: <span class="kw-2">&amp;</span>Path, child: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;PathBuf&gt; {
+<a href=#12 id=12 data-nosnippet>12</a><span class="kw">pub fn </span>merge_path(root: <span class="kw-2">&amp;</span>Path, child: <span class="kw-2">&amp;</span>Path, trailing: bool) -&gt; <span class="prelude-ty">Result</span>&lt;PathBuf&gt; {
 <a href=#13 id=13 data-nosnippet>13</a>    <span class="kw">let </span>clean = clean_path(child)<span class="question-mark">?</span>;
-<a href=#14 id=14 data-nosnippet>14</a>    <span class="prelude-val">Ok</span>(root.join(clean))
-<a href=#15 id=15 data-nosnippet>15</a>}
-<a href=#16 id=16 data-nosnippet>16</a>
-<a href=#17 id=17 data-nosnippet>17</a><span class="kw">pub fn </span>clean_path(path: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;PathBuf&gt; {
-<a href=#18 id=18 data-nosnippet>18</a>    <span class="kw">let </span><span class="kw-2">mut </span>res = PathBuf::new();
-<a href=#19 id=19 data-nosnippet>19</a>    <span class="kw">for </span>item <span class="kw">in </span>path.components() {
-<a href=#20 id=20 data-nosnippet>20</a>        <span class="kw">match </span>item {
-<a href=#21 id=21 data-nosnippet>21</a>            Component::CurDir | Component::RootDir =&gt; {}
-<a href=#22 id=22 data-nosnippet>22</a>            Component::Prefix(_prefix) =&gt; {
-<a href=#23 id=23 data-nosnippet>23</a>                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::other(<span class="string">"incompatible path containing prefix"</span>));
-<a href=#24 id=24 data-nosnippet>24</a>            }
-<a href=#25 id=25 data-nosnippet>25</a>            Component::Normal(inner) =&gt; {
-<a href=#26 id=26 data-nosnippet>26</a>                res.push(inner);
-<a href=#27 id=27 data-nosnippet>27</a>            }
-<a href=#28 id=28 data-nosnippet>28</a>            Component::ParentDir =&gt; {
-<a href=#29 id=29 data-nosnippet>29</a>                <span class="kw">if </span>!res.pop() {
-<a href=#30 id=30 data-nosnippet>30</a>                    <span class="kw">return </span><span class="prelude-val">Err</span>(Error::new(ErrorKind::NotFound, <span class="string">"No such file or directory"</span>));
-<a href=#31 id=31 data-nosnippet>31</a>                }
-<a href=#32 id=32 data-nosnippet>32</a>            }
-<a href=#33 id=33 data-nosnippet>33</a>        }
-<a href=#34 id=34 data-nosnippet>34</a>    }
-<a href=#35 id=35 data-nosnippet>35</a>    <span class="prelude-val">Ok</span>(res)
-<a href=#36 id=36 data-nosnippet>36</a>}</code></pre></div></section></main></body></html>
+<a href=#14 id=14 data-nosnippet>14</a>    <span class="kw">if </span>!trailing &amp;&amp; clean.components().next().is_none() {
+<a href=#15 id=15 data-nosnippet>15</a>        <span class="prelude-val">Ok</span>(root.to_path_buf())
+<a href=#16 id=16 data-nosnippet>16</a>    } <span class="kw">else </span>{
+<a href=#17 id=17 data-nosnippet>17</a>        <span class="prelude-val">Ok</span>(root.join(clean))
+<a href=#18 id=18 data-nosnippet>18</a>    }
+<a href=#19 id=19 data-nosnippet>19</a>}
+<a href=#20 id=20 data-nosnippet>20</a>
+<a href=#21 id=21 data-nosnippet>21</a><span class="kw">pub fn </span>clean_path(path: <span class="kw-2">&amp;</span>Path) -&gt; <span class="prelude-ty">Result</span>&lt;PathBuf&gt; {
+<a href=#22 id=22 data-nosnippet>22</a>    <span class="kw">let </span><span class="kw-2">mut </span>res = PathBuf::new();
+<a href=#23 id=23 data-nosnippet>23</a>    <span class="kw">for </span>item <span class="kw">in </span>path.components() {
+<a href=#24 id=24 data-nosnippet>24</a>        <span class="kw">match </span>item {
+<a href=#25 id=25 data-nosnippet>25</a>            Component::CurDir | Component::RootDir =&gt; {}
+<a href=#26 id=26 data-nosnippet>26</a>            Component::Prefix(_prefix) =&gt; {
+<a href=#27 id=27 data-nosnippet>27</a>                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::other(<span class="string">"incompatible path containing prefix"</span>));
+<a href=#28 id=28 data-nosnippet>28</a>            }
+<a href=#29 id=29 data-nosnippet>29</a>            Component::Normal(inner) =&gt; {
+<a href=#30 id=30 data-nosnippet>30</a>                res.push(inner);
+<a href=#31 id=31 data-nosnippet>31</a>            }
+<a href=#32 id=32 data-nosnippet>32</a>            Component::ParentDir =&gt; {
+<a href=#33 id=33 data-nosnippet>33</a>                <span class="kw">if </span>!res.pop() {
+<a href=#34 id=34 data-nosnippet>34</a>                    <span class="kw">return </span><span class="prelude-val">Err</span>(Error::new(ErrorKind::NotFound, <span class="string">"No such file or directory"</span>));
+<a href=#35 id=35 data-nosnippet>35</a>                }
+<a href=#36 id=36 data-nosnippet>36</a>            }
+<a href=#37 id=37 data-nosnippet>37</a>        }
+<a href=#38 id=38 data-nosnippet>38</a>    }
+<a href=#39 id=39 data-nosnippet>39</a>    <span class="prelude-val">Ok</span>(res)
+<a href=#40 id=40 data-nosnippet>40</a>}</code></pre></div></section></main></body></html>
