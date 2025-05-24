@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use std::io::{Error, ErrorKind, Result};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::Poll;
@@ -67,6 +67,12 @@ impl PCloudStoreConfig {
 struct InnerStore {
     client: pcloud::Client,
     root: PathBuf,
+}
+
+impl InnerStore {
+    fn real_path(&self, path: &Path) -> Result<PathBuf> {
+        crate::util::merge_path(&self.root, path, false)
+    }
 }
 
 /// A store backed by the pCloud remote storage service.
@@ -147,7 +153,7 @@ impl crate::StoreDirectory for PCloudStoreDirectory {
 
     /// Checks if the directory exists on pCloud.
     async fn exists(&self) -> Result<bool> {
-        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let path = self.store.real_path(&self.path)?;
         let identifier = FolderIdentifier::path(path.to_string_lossy());
         match self.store.client.list_folder(identifier).await {
             Ok(_) => Ok(true),
@@ -158,7 +164,7 @@ impl crate::StoreDirectory for PCloudStoreDirectory {
 
     /// Reads the directory contents from pCloud and returns an entry reader.
     async fn read(&self) -> Result<Self::Reader> {
-        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let path = self.store.real_path(&self.path)?;
         let identifier = FolderIdentifier::path(path.to_string_lossy());
         match self.store.client.list_folder(identifier).await {
             Ok(folder) => Ok(PCloudStoreDirectoryReader {
@@ -174,7 +180,7 @@ impl crate::StoreDirectory for PCloudStoreDirectory {
     }
 
     async fn delete(&self) -> Result<()> {
-        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let path = self.store.real_path(&self.path)?;
         let identifier = FolderIdentifier::path(path.to_string_lossy());
         match self.store.client.delete_folder(identifier).await {
             Ok(_) => Ok(()),
@@ -190,7 +196,7 @@ impl crate::StoreDirectory for PCloudStoreDirectory {
     }
 
     async fn delete_recursive(&self) -> Result<()> {
-        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let path = self.store.real_path(&self.path)?;
         let identifier = FolderIdentifier::path(path.to_string_lossy());
         match self.store.client.delete_folder_recursive(identifier).await {
             Ok(_) => Ok(()),
@@ -273,7 +279,7 @@ impl crate::StoreFile for PCloudStoreFile {
 
     /// Checks whether the file exists on pCloud.
     async fn exists(&self) -> Result<bool> {
-        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let path = self.store.real_path(&self.path)?;
         let identifier = FileIdentifier::path(path.to_string_lossy());
         match self.store.client.get_file_checksum(identifier).await {
             Ok(_) => Ok(true),
@@ -285,7 +291,7 @@ impl crate::StoreFile for PCloudStoreFile {
     /// Retrieves metadata about the file (size, creation, and modification
     /// times).
     async fn metadata(&self) -> Result<Self::Metadata> {
-        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let path = self.store.real_path(&self.path)?;
         let identifier = FileIdentifier::path(path.to_string_lossy());
         match self.store.client.get_file_checksum(identifier).await {
             Ok(file) => Ok(PCloudStoreFileMetadata {
@@ -304,7 +310,7 @@ impl crate::StoreFile for PCloudStoreFile {
     /// Reads a byte range of the file content using a download link from
     /// pCloud.
     async fn read<R: std::ops::RangeBounds<u64>>(&self, range: R) -> Result<Self::FileReader> {
-        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let path = self.store.real_path(&self.path)?;
         let identifier = FileIdentifier::path(path.to_string_lossy());
         let links = self
             .store
@@ -349,7 +355,7 @@ impl crate::StoreFile for PCloudStoreFile {
             _ => {}
         };
 
-        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let path = self.store.real_path(&self.path)?;
         let parent: FolderIdentifier<'static> = path
             .parent()
             .map(|parent| parent.to_path_buf())
@@ -392,7 +398,7 @@ impl crate::StoreFile for PCloudStoreFile {
     }
 
     async fn delete(&self) -> Result<()> {
-        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let path = self.store.real_path(&self.path)?;
         let identifier = FileIdentifier::path(path.to_string_lossy());
         self.store
             .client

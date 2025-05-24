@@ -1,7 +1,7 @@
 use std::io::{Error, ErrorKind, Result, SeekFrom};
 use std::ops::{Bound, RangeBounds};
 use std::os::unix::fs::MetadataExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::Poll;
@@ -30,6 +30,12 @@ impl LocalStoreConfig {
 #[derive(Debug)]
 struct InnerLocalStore {
     root: PathBuf,
+}
+
+impl InnerLocalStore {
+    fn real_path(&self, path: &Path) -> Result<PathBuf> {
+        crate::util::merge_path(&self.root, path, false)
+    }
 }
 
 /// Wrapper for the local store, enabling shared ownership.
@@ -124,7 +130,7 @@ impl StoreDirectory for LocalStoreDirectory {
     /// Returns a future that resolves to `true` if the directory exists,
     /// otherwise `false`.
     async fn exists(&self) -> Result<bool> {
-        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let path = self.store.real_path(&self.path)?;
         tokio::fs::try_exists(path).await
     }
 
@@ -133,7 +139,7 @@ impl StoreDirectory for LocalStoreDirectory {
     /// Returns a future that resolves to a reader for iterating over the
     /// directory's entries.
     async fn read(&self) -> Result<Self::Reader> {
-        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let path = self.store.real_path(&self.path)?;
         tokio::fs::read_dir(path)
             .await
             .map(|value| LocalStoreDirectoryReader {
@@ -204,7 +210,7 @@ impl StoreFile for LocalStoreFile {
     /// Returns a future that resolves to `true` if the file exists, otherwise
     /// `false`.
     async fn exists(&self) -> Result<bool> {
-        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let path = self.store.real_path(&self.path)?;
         tokio::fs::try_exists(&path).await
     }
 
@@ -213,7 +219,7 @@ impl StoreFile for LocalStoreFile {
     /// Returns a future that resolves to the file's metadata, such as size and
     /// timestamps.
     async fn metadata(&self) -> Result<Self::Metadata> {
-        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let path = self.store.real_path(&self.path)?;
         let meta = tokio::fs::metadata(&path).await?;
         let size = meta.size();
         let created = meta
@@ -256,7 +262,7 @@ impl StoreFile for LocalStoreFile {
             Bound::Unbounded => None, // no limit
         };
 
-        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let path = self.store.real_path(&self.path)?;
         let mut file = tokio::fs::OpenOptions::new().read(true).open(&path).await?;
         file.seek(std::io::SeekFrom::Start(start)).await?;
         Ok(LocalStoreFileReader {
@@ -268,7 +274,7 @@ impl StoreFile for LocalStoreFile {
     }
 
     async fn write(&self, options: crate::WriteOptions) -> Result<Self::FileWriter> {
-        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let path = self.store.real_path(&self.path)?;
         let mut file = tokio::fs::OpenOptions::new()
             .append(matches!(options.mode, WriteMode::Append))
             .truncate(matches!(options.mode, WriteMode::Truncate { .. }))
@@ -286,7 +292,7 @@ impl StoreFile for LocalStoreFile {
     }
 
     async fn delete(&self) -> Result<()> {
-        let path = crate::util::merge_path(&self.store.root, &self.path)?;
+        let path = self.store.real_path(&self.path)?;
         tokio::fs::remove_file(&path).await
     }
 }

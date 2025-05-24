@@ -9,9 +9,13 @@ pub fn remove_path_prefix(root: &Path, path: &Path) -> Result<PathBuf> {
         .map_err(Error::other)
 }
 
-pub fn merge_path(root: &Path, child: &Path) -> Result<PathBuf> {
+pub fn merge_path(root: &Path, child: &Path, trailing: bool) -> Result<PathBuf> {
     let clean = clean_path(child)?;
-    Ok(root.join(clean))
+    if !trailing && clean.components().next().is_none() {
+        Ok(root.to_path_buf())
+    } else {
+        Ok(root.join(clean))
+    }
 }
 
 pub fn clean_path(path: &Path) -> Result<PathBuf> {
