@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-0.12.16/src/async_impl/response.rs`."><title>response.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-916cea96.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="reqwest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.87.0 (17067e9ac 2025-05-09)" data-channel="1.87.0" data-search-js="search-e7298875.js" data-settings-js="settings-d72f25bb.js" ><script src="../../../static.files/storage-82c7156e.js"></script><script defer src="../../../static.files/src-script-63605ae7.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fb8c74a8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">reqwest/async_impl/</div>response.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::fmt;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-0.12.19/src/async_impl/response.rs`."><title>response.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-916cea96.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="reqwest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.87.0 (17067e9ac 2025-05-09)" data-channel="1.87.0" data-search-js="search-e7298875.js" data-settings-js="settings-d72f25bb.js" ><script src="../../../static.files/storage-82c7156e.js"></script><script defer src="../../../static.files/src-script-63605ae7.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fb8c74a8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">reqwest/async_impl/</div>response.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::fmt;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>std::net::SocketAddr;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>std::pin::Pin;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>std::time::Duration;
@@ -385,127 +385,129 @@
 <a href=#385 id=385 data-nosnippet>385</a>    /// ```
 <a href=#386 id=386 data-nosnippet>386</a>    </span><span class="kw">pub fn </span>error_for_status(<span class="self">self</span>) -&gt; <span class="kw">crate</span>::Result&lt;<span class="self">Self</span>&gt; {
 <a href=#387 id=387 data-nosnippet>387</a>        <span class="kw">let </span>status = <span class="self">self</span>.status();
-<a href=#388 id=388 data-nosnippet>388</a>        <span class="kw">if </span>status.is_client_error() || status.is_server_error() {
-<a href=#389 id=389 data-nosnippet>389</a>            <span class="prelude-val">Err</span>(<span class="kw">crate</span>::error::status_code(<span class="kw-2">*</span><span class="self">self</span>.url, status))
-<a href=#390 id=390 data-nosnippet>390</a>        } <span class="kw">else </span>{
-<a href=#391 id=391 data-nosnippet>391</a>            <span class="prelude-val">Ok</span>(<span class="self">self</span>)
-<a href=#392 id=392 data-nosnippet>392</a>        }
-<a href=#393 id=393 data-nosnippet>393</a>    }
-<a href=#394 id=394 data-nosnippet>394</a>
-<a href=#395 id=395 data-nosnippet>395</a>    <span class="doccomment">/// Turn a reference to a response into an error if the server returned an error.
-<a href=#396 id=396 data-nosnippet>396</a>    ///
-<a href=#397 id=397 data-nosnippet>397</a>    /// # Example
-<a href=#398 id=398 data-nosnippet>398</a>    ///
-<a href=#399 id=399 data-nosnippet>399</a>    /// ```
-<a href=#400 id=400 data-nosnippet>400</a>    /// # use reqwest::Response;
-<a href=#401 id=401 data-nosnippet>401</a>    /// fn on_response(res: &amp;Response) {
-<a href=#402 id=402 data-nosnippet>402</a>    ///     match res.error_for_status_ref() {
-<a href=#403 id=403 data-nosnippet>403</a>    ///         Ok(_res) =&gt; (),
-<a href=#404 id=404 data-nosnippet>404</a>    ///         Err(err) =&gt; {
-<a href=#405 id=405 data-nosnippet>405</a>    ///             // asserting a 400 as an example
-<a href=#406 id=406 data-nosnippet>406</a>    ///             // it could be any status between 400...599
-<a href=#407 id=407 data-nosnippet>407</a>    ///             assert_eq!(
-<a href=#408 id=408 data-nosnippet>408</a>    ///                 err.status(),
-<a href=#409 id=409 data-nosnippet>409</a>    ///                 Some(reqwest::StatusCode::BAD_REQUEST)
-<a href=#410 id=410 data-nosnippet>410</a>    ///             );
-<a href=#411 id=411 data-nosnippet>411</a>    ///         }
-<a href=#412 id=412 data-nosnippet>412</a>    ///     }
-<a href=#413 id=413 data-nosnippet>413</a>    /// }
-<a href=#414 id=414 data-nosnippet>414</a>    /// # fn main() {}
-<a href=#415 id=415 data-nosnippet>415</a>    /// ```
-<a href=#416 id=416 data-nosnippet>416</a>    </span><span class="kw">pub fn </span>error_for_status_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">crate</span>::Result&lt;<span class="kw-2">&amp;</span><span class="self">Self</span>&gt; {
-<a href=#417 id=417 data-nosnippet>417</a>        <span class="kw">let </span>status = <span class="self">self</span>.status();
-<a href=#418 id=418 data-nosnippet>418</a>        <span class="kw">if </span>status.is_client_error() || status.is_server_error() {
-<a href=#419 id=419 data-nosnippet>419</a>            <span class="prelude-val">Err</span>(<span class="kw">crate</span>::error::status_code(<span class="kw-2">*</span><span class="self">self</span>.url.clone(), status))
-<a href=#420 id=420 data-nosnippet>420</a>        } <span class="kw">else </span>{
-<a href=#421 id=421 data-nosnippet>421</a>            <span class="prelude-val">Ok</span>(<span class="self">self</span>)
-<a href=#422 id=422 data-nosnippet>422</a>        }
-<a href=#423 id=423 data-nosnippet>423</a>    }
-<a href=#424 id=424 data-nosnippet>424</a>
-<a href=#425 id=425 data-nosnippet>425</a>    <span class="comment">// private
+<a href=#388 id=388 data-nosnippet>388</a>        <span class="kw">let </span>reason = <span class="self">self</span>.extensions().get::&lt;hyper::ext::ReasonPhrase&gt;().cloned();
+<a href=#389 id=389 data-nosnippet>389</a>        <span class="kw">if </span>status.is_client_error() || status.is_server_error() {
+<a href=#390 id=390 data-nosnippet>390</a>            <span class="prelude-val">Err</span>(<span class="kw">crate</span>::error::status_code(<span class="kw-2">*</span><span class="self">self</span>.url, status, reason))
+<a href=#391 id=391 data-nosnippet>391</a>        } <span class="kw">else </span>{
+<a href=#392 id=392 data-nosnippet>392</a>            <span class="prelude-val">Ok</span>(<span class="self">self</span>)
+<a href=#393 id=393 data-nosnippet>393</a>        }
+<a href=#394 id=394 data-nosnippet>394</a>    }
+<a href=#395 id=395 data-nosnippet>395</a>
+<a href=#396 id=396 data-nosnippet>396</a>    <span class="doccomment">/// Turn a reference to a response into an error if the server returned an error.
+<a href=#397 id=397 data-nosnippet>397</a>    ///
+<a href=#398 id=398 data-nosnippet>398</a>    /// # Example
+<a href=#399 id=399 data-nosnippet>399</a>    ///
+<a href=#400 id=400 data-nosnippet>400</a>    /// ```
+<a href=#401 id=401 data-nosnippet>401</a>    /// # use reqwest::Response;
+<a href=#402 id=402 data-nosnippet>402</a>    /// fn on_response(res: &amp;Response) {
+<a href=#403 id=403 data-nosnippet>403</a>    ///     match res.error_for_status_ref() {
+<a href=#404 id=404 data-nosnippet>404</a>    ///         Ok(_res) =&gt; (),
+<a href=#405 id=405 data-nosnippet>405</a>    ///         Err(err) =&gt; {
+<a href=#406 id=406 data-nosnippet>406</a>    ///             // asserting a 400 as an example
+<a href=#407 id=407 data-nosnippet>407</a>    ///             // it could be any status between 400...599
+<a href=#408 id=408 data-nosnippet>408</a>    ///             assert_eq!(
+<a href=#409 id=409 data-nosnippet>409</a>    ///                 err.status(),
+<a href=#410 id=410 data-nosnippet>410</a>    ///                 Some(reqwest::StatusCode::BAD_REQUEST)
+<a href=#411 id=411 data-nosnippet>411</a>    ///             );
+<a href=#412 id=412 data-nosnippet>412</a>    ///         }
+<a href=#413 id=413 data-nosnippet>413</a>    ///     }
+<a href=#414 id=414 data-nosnippet>414</a>    /// }
+<a href=#415 id=415 data-nosnippet>415</a>    /// # fn main() {}
+<a href=#416 id=416 data-nosnippet>416</a>    /// ```
+<a href=#417 id=417 data-nosnippet>417</a>    </span><span class="kw">pub fn </span>error_for_status_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">crate</span>::Result&lt;<span class="kw-2">&amp;</span><span class="self">Self</span>&gt; {
+<a href=#418 id=418 data-nosnippet>418</a>        <span class="kw">let </span>status = <span class="self">self</span>.status();
+<a href=#419 id=419 data-nosnippet>419</a>        <span class="kw">let </span>reason = <span class="self">self</span>.extensions().get::&lt;hyper::ext::ReasonPhrase&gt;().cloned();
+<a href=#420 id=420 data-nosnippet>420</a>        <span class="kw">if </span>status.is_client_error() || status.is_server_error() {
+<a href=#421 id=421 data-nosnippet>421</a>            <span class="prelude-val">Err</span>(<span class="kw">crate</span>::error::status_code(<span class="kw-2">*</span><span class="self">self</span>.url.clone(), status, reason))
+<a href=#422 id=422 data-nosnippet>422</a>        } <span class="kw">else </span>{
+<a href=#423 id=423 data-nosnippet>423</a>            <span class="prelude-val">Ok</span>(<span class="self">self</span>)
+<a href=#424 id=424 data-nosnippet>424</a>        }
+<a href=#425 id=425 data-nosnippet>425</a>    }
 <a href=#426 id=426 data-nosnippet>426</a>
-<a href=#427 id=427 data-nosnippet>427</a>    // The Response's body is an implementation detail.
-<a href=#428 id=428 data-nosnippet>428</a>    // You no longer need to get a reference to it, there are async methods
-<a href=#429 id=429 data-nosnippet>429</a>    // on the `Response` itself.
-<a href=#430 id=430 data-nosnippet>430</a>    //
-<a href=#431 id=431 data-nosnippet>431</a>    // This method is just used by the blocking API.
-<a href=#432 id=432 data-nosnippet>432</a>    </span><span class="attr">#[cfg(feature = <span class="string">"blocking"</span>)]
-<a href=#433 id=433 data-nosnippet>433</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>body_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>Decoder {
-<a href=#434 id=434 data-nosnippet>434</a>        <span class="self">self</span>.res.body_mut()
-<a href=#435 id=435 data-nosnippet>435</a>    }
-<a href=#436 id=436 data-nosnippet>436</a>}
-<a href=#437 id=437 data-nosnippet>437</a>
-<a href=#438 id=438 data-nosnippet>438</a><span class="kw">impl </span>fmt::Debug <span class="kw">for </span>Response {
-<a href=#439 id=439 data-nosnippet>439</a>    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-<a href=#440 id=440 data-nosnippet>440</a>        f.debug_struct(<span class="string">"Response"</span>)
-<a href=#441 id=441 data-nosnippet>441</a>            .field(<span class="string">"url"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.url().as_str())
-<a href=#442 id=442 data-nosnippet>442</a>            .field(<span class="string">"status"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.status())
-<a href=#443 id=443 data-nosnippet>443</a>            .field(<span class="string">"headers"</span>, <span class="self">self</span>.headers())
-<a href=#444 id=444 data-nosnippet>444</a>            .finish()
-<a href=#445 id=445 data-nosnippet>445</a>    }
-<a href=#446 id=446 data-nosnippet>446</a>}
-<a href=#447 id=447 data-nosnippet>447</a>
-<a href=#448 id=448 data-nosnippet>448</a><span class="doccomment">/// A `Response` can be piped as the `Body` of another request.
-<a href=#449 id=449 data-nosnippet>449</a></span><span class="kw">impl </span>From&lt;Response&gt; <span class="kw">for </span>Body {
-<a href=#450 id=450 data-nosnippet>450</a>    <span class="kw">fn </span>from(r: Response) -&gt; Body {
-<a href=#451 id=451 data-nosnippet>451</a>        Body::wrap(r.res.into_body())
-<a href=#452 id=452 data-nosnippet>452</a>    }
-<a href=#453 id=453 data-nosnippet>453</a>}
-<a href=#454 id=454 data-nosnippet>454</a>
-<a href=#455 id=455 data-nosnippet>455</a><span class="comment">// I'm not sure this conversion is that useful... People should be encouraged
-<a href=#456 id=456 data-nosnippet>456</a>// to use `http::Response`, not `reqwest::Response`.
-<a href=#457 id=457 data-nosnippet>457</a></span><span class="kw">impl</span>&lt;T: Into&lt;Body&gt;&gt; From&lt;http::Response&lt;T&gt;&gt; <span class="kw">for </span>Response {
-<a href=#458 id=458 data-nosnippet>458</a>    <span class="kw">fn </span>from(r: http::Response&lt;T&gt;) -&gt; Response {
-<a href=#459 id=459 data-nosnippet>459</a>        <span class="kw">use </span><span class="kw">crate</span>::response::ResponseUrl;
-<a href=#460 id=460 data-nosnippet>460</a>
-<a href=#461 id=461 data-nosnippet>461</a>        <span class="kw">let </span>(<span class="kw-2">mut </span>parts, body) = r.into_parts();
-<a href=#462 id=462 data-nosnippet>462</a>        <span class="kw">let </span>body: <span class="kw">crate</span>::async_impl::body::Body = body.into();
-<a href=#463 id=463 data-nosnippet>463</a>        <span class="kw">let </span>decoder = Decoder::detect(
-<a href=#464 id=464 data-nosnippet>464</a>            <span class="kw-2">&amp;mut </span>parts.headers,
-<a href=#465 id=465 data-nosnippet>465</a>            ResponseBody::new(body.map_err(Into::into)),
-<a href=#466 id=466 data-nosnippet>466</a>            Accepts::none(),
-<a href=#467 id=467 data-nosnippet>467</a>        );
-<a href=#468 id=468 data-nosnippet>468</a>        <span class="kw">let </span>url = parts
-<a href=#469 id=469 data-nosnippet>469</a>            .extensions
-<a href=#470 id=470 data-nosnippet>470</a>            .remove::&lt;ResponseUrl&gt;()
-<a href=#471 id=471 data-nosnippet>471</a>            .unwrap_or_else(|| ResponseUrl(Url::parse(<span class="string">"http://no.url.provided.local"</span>).unwrap()));
-<a href=#472 id=472 data-nosnippet>472</a>        <span class="kw">let </span>url = url.<span class="number">0</span>;
-<a href=#473 id=473 data-nosnippet>473</a>        <span class="kw">let </span>res = hyper::Response::from_parts(parts, decoder);
-<a href=#474 id=474 data-nosnippet>474</a>        Response {
-<a href=#475 id=475 data-nosnippet>475</a>            res,
-<a href=#476 id=476 data-nosnippet>476</a>            url: Box::new(url),
-<a href=#477 id=477 data-nosnippet>477</a>        }
-<a href=#478 id=478 data-nosnippet>478</a>    }
-<a href=#479 id=479 data-nosnippet>479</a>}
-<a href=#480 id=480 data-nosnippet>480</a>
-<a href=#481 id=481 data-nosnippet>481</a><span class="doccomment">/// A `Response` can be converted into a `http::Response`.
-<a href=#482 id=482 data-nosnippet>482</a></span><span class="comment">// It's supposed to be the inverse of the conversion above.
-<a href=#483 id=483 data-nosnippet>483</a></span><span class="kw">impl </span>From&lt;Response&gt; <span class="kw">for </span>http::Response&lt;Body&gt; {
-<a href=#484 id=484 data-nosnippet>484</a>    <span class="kw">fn </span>from(r: Response) -&gt; http::Response&lt;Body&gt; {
-<a href=#485 id=485 data-nosnippet>485</a>        <span class="kw">let </span>(parts, body) = r.res.into_parts();
-<a href=#486 id=486 data-nosnippet>486</a>        <span class="kw">let </span>body = Body::wrap(body);
-<a href=#487 id=487 data-nosnippet>487</a>        http::Response::from_parts(parts, body)
-<a href=#488 id=488 data-nosnippet>488</a>    }
-<a href=#489 id=489 data-nosnippet>489</a>}
-<a href=#490 id=490 data-nosnippet>490</a>
-<a href=#491 id=491 data-nosnippet>491</a><span class="attr">#[cfg(test)]
-<a href=#492 id=492 data-nosnippet>492</a></span><span class="kw">mod </span>tests {
-<a href=#493 id=493 data-nosnippet>493</a>    <span class="kw">use </span><span class="kw">super</span>::Response;
-<a href=#494 id=494 data-nosnippet>494</a>    <span class="kw">use </span><span class="kw">crate</span>::ResponseBuilderExt;
-<a href=#495 id=495 data-nosnippet>495</a>    <span class="kw">use </span>http::response::Builder;
-<a href=#496 id=496 data-nosnippet>496</a>    <span class="kw">use </span>url::Url;
-<a href=#497 id=497 data-nosnippet>497</a>
-<a href=#498 id=498 data-nosnippet>498</a>    <span class="attr">#[test]
-<a href=#499 id=499 data-nosnippet>499</a>    </span><span class="kw">fn </span>test_from_http_response() {
-<a href=#500 id=500 data-nosnippet>500</a>        <span class="kw">let </span>url = Url::parse(<span class="string">"http://example.com"</span>).unwrap();
-<a href=#501 id=501 data-nosnippet>501</a>        <span class="kw">let </span>response = Builder::new()
-<a href=#502 id=502 data-nosnippet>502</a>            .status(<span class="number">200</span>)
-<a href=#503 id=503 data-nosnippet>503</a>            .url(url.clone())
-<a href=#504 id=504 data-nosnippet>504</a>            .body(<span class="string">"foo"</span>)
-<a href=#505 id=505 data-nosnippet>505</a>            .unwrap();
-<a href=#506 id=506 data-nosnippet>506</a>        <span class="kw">let </span>response = Response::from(response);
-<a href=#507 id=507 data-nosnippet>507</a>
-<a href=#508 id=508 data-nosnippet>508</a>        <span class="macro">assert_eq!</span>(response.status(), <span class="number">200</span>);
-<a href=#509 id=509 data-nosnippet>509</a>        <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>response.url(), url);
-<a href=#510 id=510 data-nosnippet>510</a>    }
-<a href=#511 id=511 data-nosnippet>511</a>}</code></pre></div></section></main></body></html>
+<a href=#427 id=427 data-nosnippet>427</a>    <span class="comment">// private
+<a href=#428 id=428 data-nosnippet>428</a>
+<a href=#429 id=429 data-nosnippet>429</a>    // The Response's body is an implementation detail.
+<a href=#430 id=430 data-nosnippet>430</a>    // You no longer need to get a reference to it, there are async methods
+<a href=#431 id=431 data-nosnippet>431</a>    // on the `Response` itself.
+<a href=#432 id=432 data-nosnippet>432</a>    //
+<a href=#433 id=433 data-nosnippet>433</a>    // This method is just used by the blocking API.
+<a href=#434 id=434 data-nosnippet>434</a>    </span><span class="attr">#[cfg(feature = <span class="string">"blocking"</span>)]
+<a href=#435 id=435 data-nosnippet>435</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>body_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>Decoder {
+<a href=#436 id=436 data-nosnippet>436</a>        <span class="self">self</span>.res.body_mut()
+<a href=#437 id=437 data-nosnippet>437</a>    }
+<a href=#438 id=438 data-nosnippet>438</a>}
+<a href=#439 id=439 data-nosnippet>439</a>
+<a href=#440 id=440 data-nosnippet>440</a><span class="kw">impl </span>fmt::Debug <span class="kw">for </span>Response {
+<a href=#441 id=441 data-nosnippet>441</a>    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
+<a href=#442 id=442 data-nosnippet>442</a>        f.debug_struct(<span class="string">"Response"</span>)
+<a href=#443 id=443 data-nosnippet>443</a>            .field(<span class="string">"url"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.url().as_str())
+<a href=#444 id=444 data-nosnippet>444</a>            .field(<span class="string">"status"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.status())
+<a href=#445 id=445 data-nosnippet>445</a>            .field(<span class="string">"headers"</span>, <span class="self">self</span>.headers())
+<a href=#446 id=446 data-nosnippet>446</a>            .finish()
+<a href=#447 id=447 data-nosnippet>447</a>    }
+<a href=#448 id=448 data-nosnippet>448</a>}
+<a href=#449 id=449 data-nosnippet>449</a>
+<a href=#450 id=450 data-nosnippet>450</a><span class="doccomment">/// A `Response` can be piped as the `Body` of another request.
+<a href=#451 id=451 data-nosnippet>451</a></span><span class="kw">impl </span>From&lt;Response&gt; <span class="kw">for </span>Body {
+<a href=#452 id=452 data-nosnippet>452</a>    <span class="kw">fn </span>from(r: Response) -&gt; Body {
+<a href=#453 id=453 data-nosnippet>453</a>        Body::wrap(r.res.into_body())
+<a href=#454 id=454 data-nosnippet>454</a>    }
+<a href=#455 id=455 data-nosnippet>455</a>}
+<a href=#456 id=456 data-nosnippet>456</a>
+<a href=#457 id=457 data-nosnippet>457</a><span class="comment">// I'm not sure this conversion is that useful... People should be encouraged
+<a href=#458 id=458 data-nosnippet>458</a>// to use `http::Response`, not `reqwest::Response`.
+<a href=#459 id=459 data-nosnippet>459</a></span><span class="kw">impl</span>&lt;T: Into&lt;Body&gt;&gt; From&lt;http::Response&lt;T&gt;&gt; <span class="kw">for </span>Response {
+<a href=#460 id=460 data-nosnippet>460</a>    <span class="kw">fn </span>from(r: http::Response&lt;T&gt;) -&gt; Response {
+<a href=#461 id=461 data-nosnippet>461</a>        <span class="kw">use </span><span class="kw">crate</span>::response::ResponseUrl;
+<a href=#462 id=462 data-nosnippet>462</a>
+<a href=#463 id=463 data-nosnippet>463</a>        <span class="kw">let </span>(<span class="kw-2">mut </span>parts, body) = r.into_parts();
+<a href=#464 id=464 data-nosnippet>464</a>        <span class="kw">let </span>body: <span class="kw">crate</span>::async_impl::body::Body = body.into();
+<a href=#465 id=465 data-nosnippet>465</a>        <span class="kw">let </span>decoder = Decoder::detect(
+<a href=#466 id=466 data-nosnippet>466</a>            <span class="kw-2">&amp;mut </span>parts.headers,
+<a href=#467 id=467 data-nosnippet>467</a>            ResponseBody::new(body.map_err(Into::into)),
+<a href=#468 id=468 data-nosnippet>468</a>            Accepts::none(),
+<a href=#469 id=469 data-nosnippet>469</a>        );
+<a href=#470 id=470 data-nosnippet>470</a>        <span class="kw">let </span>url = parts
+<a href=#471 id=471 data-nosnippet>471</a>            .extensions
+<a href=#472 id=472 data-nosnippet>472</a>            .remove::&lt;ResponseUrl&gt;()
+<a href=#473 id=473 data-nosnippet>473</a>            .unwrap_or_else(|| ResponseUrl(Url::parse(<span class="string">"http://no.url.provided.local"</span>).unwrap()));
+<a href=#474 id=474 data-nosnippet>474</a>        <span class="kw">let </span>url = url.<span class="number">0</span>;
+<a href=#475 id=475 data-nosnippet>475</a>        <span class="kw">let </span>res = hyper::Response::from_parts(parts, decoder);
+<a href=#476 id=476 data-nosnippet>476</a>        Response {
+<a href=#477 id=477 data-nosnippet>477</a>            res,
+<a href=#478 id=478 data-nosnippet>478</a>            url: Box::new(url),
+<a href=#479 id=479 data-nosnippet>479</a>        }
+<a href=#480 id=480 data-nosnippet>480</a>    }
+<a href=#481 id=481 data-nosnippet>481</a>}
+<a href=#482 id=482 data-nosnippet>482</a>
+<a href=#483 id=483 data-nosnippet>483</a><span class="doccomment">/// A `Response` can be converted into a `http::Response`.
+<a href=#484 id=484 data-nosnippet>484</a></span><span class="comment">// It's supposed to be the inverse of the conversion above.
+<a href=#485 id=485 data-nosnippet>485</a></span><span class="kw">impl </span>From&lt;Response&gt; <span class="kw">for </span>http::Response&lt;Body&gt; {
+<a href=#486 id=486 data-nosnippet>486</a>    <span class="kw">fn </span>from(r: Response) -&gt; http::Response&lt;Body&gt; {
+<a href=#487 id=487 data-nosnippet>487</a>        <span class="kw">let </span>(parts, body) = r.res.into_parts();
+<a href=#488 id=488 data-nosnippet>488</a>        <span class="kw">let </span>body = Body::wrap(body);
+<a href=#489 id=489 data-nosnippet>489</a>        http::Response::from_parts(parts, body)
+<a href=#490 id=490 data-nosnippet>490</a>    }
+<a href=#491 id=491 data-nosnippet>491</a>}
+<a href=#492 id=492 data-nosnippet>492</a>
+<a href=#493 id=493 data-nosnippet>493</a><span class="attr">#[cfg(test)]
+<a href=#494 id=494 data-nosnippet>494</a></span><span class="kw">mod </span>tests {
+<a href=#495 id=495 data-nosnippet>495</a>    <span class="kw">use </span><span class="kw">super</span>::Response;
+<a href=#496 id=496 data-nosnippet>496</a>    <span class="kw">use </span><span class="kw">crate</span>::ResponseBuilderExt;
+<a href=#497 id=497 data-nosnippet>497</a>    <span class="kw">use </span>http::response::Builder;
+<a href=#498 id=498 data-nosnippet>498</a>    <span class="kw">use </span>url::Url;
+<a href=#499 id=499 data-nosnippet>499</a>
+<a href=#500 id=500 data-nosnippet>500</a>    <span class="attr">#[test]
+<a href=#501 id=501 data-nosnippet>501</a>    </span><span class="kw">fn </span>test_from_http_response() {
+<a href=#502 id=502 data-nosnippet>502</a>        <span class="kw">let </span>url = Url::parse(<span class="string">"http://example.com"</span>).unwrap();
+<a href=#503 id=503 data-nosnippet>503</a>        <span class="kw">let </span>response = Builder::new()
+<a href=#504 id=504 data-nosnippet>504</a>            .status(<span class="number">200</span>)
+<a href=#505 id=505 data-nosnippet>505</a>            .url(url.clone())
+<a href=#506 id=506 data-nosnippet>506</a>            .body(<span class="string">"foo"</span>)
+<a href=#507 id=507 data-nosnippet>507</a>            .unwrap();
+<a href=#508 id=508 data-nosnippet>508</a>        <span class="kw">let </span>response = Response::from(response);
+<a href=#509 id=509 data-nosnippet>509</a>
+<a href=#510 id=510 data-nosnippet>510</a>        <span class="macro">assert_eq!</span>(response.status(), <span class="number">200</span>);
+<a href=#511 id=511 data-nosnippet>511</a>        <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>response.url(), url);
+<a href=#512 id=512 data-nosnippet>512</a>    }
+<a href=#513 id=513 data-nosnippet>513</a>}</code></pre></div></section></main></body></html>

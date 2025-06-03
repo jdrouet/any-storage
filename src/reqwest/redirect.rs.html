@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-0.12.16/src/redirect.rs`."><title>redirect.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-916cea96.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="reqwest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.87.0 (17067e9ac 2025-05-09)" data-channel="1.87.0" data-search-js="search-e7298875.js" data-settings-js="settings-d72f25bb.js" ><script src="../../static.files/storage-82c7156e.js"></script><script defer src="../../static.files/src-script-63605ae7.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fb8c74a8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">reqwest/</div>redirect.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Redirect Handling
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-0.12.19/src/redirect.rs`."><title>redirect.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-916cea96.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="reqwest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.87.0 (17067e9ac 2025-05-09)" data-channel="1.87.0" data-search-js="search-e7298875.js" data-settings-js="settings-d72f25bb.js" ><script src="../../static.files/storage-82c7156e.js"></script><script defer src="../../static.files/src-script-63605ae7.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fb8c74a8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">reqwest/</div>redirect.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Redirect Handling
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! By default, a `Client` will automatically handle HTTP redirects, having a
 <a href=#4 id=4 data-nosnippet>4</a>//! maximum redirect chain of 10 hops. To customize this behavior, a
@@ -312,121 +312,122 @@
 <a href=#312 id=312 data-nosnippet>312</a>            <span class="prelude-val">Err</span>(e) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="kw">crate</span>::error::builder(e)),
 <a href=#313 id=313 data-nosnippet>313</a>        };
 <a href=#314 id=314 data-nosnippet>314</a>
-<a href=#315 id=315 data-nosnippet>315</a>        <span class="kw">if </span>next_url.scheme() != <span class="string">"http" </span>&amp;&amp; next_url.scheme() != <span class="string">"https" </span>{
-<a href=#316 id=316 data-nosnippet>316</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="kw">crate</span>::error::url_bad_scheme(next_url));
-<a href=#317 id=317 data-nosnippet>317</a>        }
-<a href=#318 id=318 data-nosnippet>318</a>
-<a href=#319 id=319 data-nosnippet>319</a>        <span class="kw">if </span><span class="self">self</span>.https_only &amp;&amp; next_url.scheme() != <span class="string">"https" </span>{
-<a href=#320 id=320 data-nosnippet>320</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="kw">crate</span>::error::redirect(
-<a href=#321 id=321 data-nosnippet>321</a>                <span class="kw">crate</span>::error::url_bad_scheme(next_url.clone()),
-<a href=#322 id=322 data-nosnippet>322</a>                next_url,
-<a href=#323 id=323 data-nosnippet>323</a>            ));
-<a href=#324 id=324 data-nosnippet>324</a>        }
-<a href=#325 id=325 data-nosnippet>325</a>
-<a href=#326 id=326 data-nosnippet>326</a>        <span class="self">self</span>.urls.push(previous_url.clone());
-<a href=#327 id=327 data-nosnippet>327</a>
-<a href=#328 id=328 data-nosnippet>328</a>        <span class="kw">match </span><span class="self">self</span>.policy.check(attempt.status(), <span class="kw-2">&amp;</span>next_url, <span class="kw-2">&amp;</span><span class="self">self</span>.urls) {
-<a href=#329 id=329 data-nosnippet>329</a>            ActionKind::Follow =&gt; <span class="prelude-val">Ok</span>(TowerAction::Follow),
-<a href=#330 id=330 data-nosnippet>330</a>            ActionKind::Stop =&gt; <span class="prelude-val">Ok</span>(TowerAction::Stop),
-<a href=#331 id=331 data-nosnippet>331</a>            ActionKind::Error(e) =&gt; <span class="prelude-val">Err</span>(<span class="kw">crate</span>::error::redirect(e, previous_url)),
-<a href=#332 id=332 data-nosnippet>332</a>        }
-<a href=#333 id=333 data-nosnippet>333</a>    }
-<a href=#334 id=334 data-nosnippet>334</a>
-<a href=#335 id=335 data-nosnippet>335</a>    <span class="kw">fn </span>on_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>, req: <span class="kw-2">&amp;mut </span>http::Request&lt;async_impl::body::Body&gt;) {
-<a href=#336 id=336 data-nosnippet>336</a>        <span class="kw">if let </span><span class="prelude-val">Ok</span>(next_url) = Url::parse(<span class="kw-2">&amp;</span>req.uri().to_string()) {
-<a href=#337 id=337 data-nosnippet>337</a>            remove_sensitive_headers(req.headers_mut(), <span class="kw-2">&amp;</span>next_url, <span class="kw-2">&amp;</span><span class="self">self</span>.urls);
-<a href=#338 id=338 data-nosnippet>338</a>            <span class="kw">if </span><span class="self">self</span>.referer {
-<a href=#339 id=339 data-nosnippet>339</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(previous_url) = <span class="self">self</span>.urls.last() {
-<a href=#340 id=340 data-nosnippet>340</a>                    <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = make_referer(<span class="kw-2">&amp;</span>next_url, previous_url) {
-<a href=#341 id=341 data-nosnippet>341</a>                        req.headers_mut().insert(REFERER, v);
-<a href=#342 id=342 data-nosnippet>342</a>                    }
-<a href=#343 id=343 data-nosnippet>343</a>                }
-<a href=#344 id=344 data-nosnippet>344</a>            }
-<a href=#345 id=345 data-nosnippet>345</a>        };
-<a href=#346 id=346 data-nosnippet>346</a>    }
-<a href=#347 id=347 data-nosnippet>347</a>
-<a href=#348 id=348 data-nosnippet>348</a>    <span class="comment">// This is must implemented to make 307 and 308 redirects work
-<a href=#349 id=349 data-nosnippet>349</a>    </span><span class="kw">fn </span>clone_body(<span class="kw-2">&amp;</span><span class="self">self</span>, body: <span class="kw-2">&amp;</span>async_impl::body::Body) -&gt; <span class="prelude-ty">Option</span>&lt;async_impl::body::Body&gt; {
-<a href=#350 id=350 data-nosnippet>350</a>        body.try_clone()
-<a href=#351 id=351 data-nosnippet>351</a>    }
-<a href=#352 id=352 data-nosnippet>352</a>}
-<a href=#353 id=353 data-nosnippet>353</a>
-<a href=#354 id=354 data-nosnippet>354</a><span class="attr">#[test]
-<a href=#355 id=355 data-nosnippet>355</a></span><span class="kw">fn </span>test_redirect_policy_limit() {
-<a href=#356 id=356 data-nosnippet>356</a>    <span class="kw">let </span>policy = Policy::default();
-<a href=#357 id=357 data-nosnippet>357</a>    <span class="kw">let </span>next = Url::parse(<span class="string">"http://x.y/z"</span>).unwrap();
-<a href=#358 id=358 data-nosnippet>358</a>    <span class="kw">let </span><span class="kw-2">mut </span>previous = (<span class="number">0</span>..=<span class="number">9</span>)
-<a href=#359 id=359 data-nosnippet>359</a>        .map(|i| Url::parse(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"http://a.b/c/{i}"</span>)).unwrap())
-<a href=#360 id=360 data-nosnippet>360</a>        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-<a href=#361 id=361 data-nosnippet>361</a>
-<a href=#362 id=362 data-nosnippet>362</a>    <span class="kw">match </span>policy.check(StatusCode::FOUND, <span class="kw-2">&amp;</span>next, <span class="kw-2">&amp;</span>previous) {
-<a href=#363 id=363 data-nosnippet>363</a>        ActionKind::Follow =&gt; (),
-<a href=#364 id=364 data-nosnippet>364</a>        other =&gt; <span class="macro">panic!</span>(<span class="string">"unexpected {other:?}"</span>),
-<a href=#365 id=365 data-nosnippet>365</a>    }
-<a href=#366 id=366 data-nosnippet>366</a>
-<a href=#367 id=367 data-nosnippet>367</a>    previous.push(Url::parse(<span class="string">"http://a.b.d/e/33"</span>).unwrap());
-<a href=#368 id=368 data-nosnippet>368</a>
-<a href=#369 id=369 data-nosnippet>369</a>    <span class="kw">match </span>policy.check(StatusCode::FOUND, <span class="kw-2">&amp;</span>next, <span class="kw-2">&amp;</span>previous) {
-<a href=#370 id=370 data-nosnippet>370</a>        ActionKind::Error(err) <span class="kw">if </span>err.is::&lt;TooManyRedirects&gt;() =&gt; (),
-<a href=#371 id=371 data-nosnippet>371</a>        other =&gt; <span class="macro">panic!</span>(<span class="string">"unexpected {other:?}"</span>),
-<a href=#372 id=372 data-nosnippet>372</a>    }
-<a href=#373 id=373 data-nosnippet>373</a>}
-<a href=#374 id=374 data-nosnippet>374</a>
-<a href=#375 id=375 data-nosnippet>375</a><span class="attr">#[test]
-<a href=#376 id=376 data-nosnippet>376</a></span><span class="kw">fn </span>test_redirect_policy_limit_to_0() {
-<a href=#377 id=377 data-nosnippet>377</a>    <span class="kw">let </span>policy = Policy::limited(<span class="number">0</span>);
-<a href=#378 id=378 data-nosnippet>378</a>    <span class="kw">let </span>next = Url::parse(<span class="string">"http://x.y/z"</span>).unwrap();
-<a href=#379 id=379 data-nosnippet>379</a>    <span class="kw">let </span>previous = <span class="macro">vec!</span>[Url::parse(<span class="string">"http://a.b/c"</span>).unwrap()];
-<a href=#380 id=380 data-nosnippet>380</a>
-<a href=#381 id=381 data-nosnippet>381</a>    <span class="kw">match </span>policy.check(StatusCode::FOUND, <span class="kw-2">&amp;</span>next, <span class="kw-2">&amp;</span>previous) {
-<a href=#382 id=382 data-nosnippet>382</a>        ActionKind::Error(err) <span class="kw">if </span>err.is::&lt;TooManyRedirects&gt;() =&gt; (),
-<a href=#383 id=383 data-nosnippet>383</a>        other =&gt; <span class="macro">panic!</span>(<span class="string">"unexpected {other:?}"</span>),
-<a href=#384 id=384 data-nosnippet>384</a>    }
-<a href=#385 id=385 data-nosnippet>385</a>}
-<a href=#386 id=386 data-nosnippet>386</a>
-<a href=#387 id=387 data-nosnippet>387</a><span class="attr">#[test]
-<a href=#388 id=388 data-nosnippet>388</a></span><span class="kw">fn </span>test_redirect_policy_custom() {
-<a href=#389 id=389 data-nosnippet>389</a>    <span class="kw">let </span>policy = Policy::custom(|attempt| {
-<a href=#390 id=390 data-nosnippet>390</a>        <span class="kw">if </span>attempt.url().host_str() == <span class="prelude-val">Some</span>(<span class="string">"foo"</span>) {
-<a href=#391 id=391 data-nosnippet>391</a>            attempt.stop()
-<a href=#392 id=392 data-nosnippet>392</a>        } <span class="kw">else </span>{
-<a href=#393 id=393 data-nosnippet>393</a>            attempt.follow()
-<a href=#394 id=394 data-nosnippet>394</a>        }
-<a href=#395 id=395 data-nosnippet>395</a>    });
-<a href=#396 id=396 data-nosnippet>396</a>
-<a href=#397 id=397 data-nosnippet>397</a>    <span class="kw">let </span>next = Url::parse(<span class="string">"http://bar/baz"</span>).unwrap();
-<a href=#398 id=398 data-nosnippet>398</a>    <span class="kw">match </span>policy.check(StatusCode::FOUND, <span class="kw-2">&amp;</span>next, <span class="kw-2">&amp;</span>[]) {
-<a href=#399 id=399 data-nosnippet>399</a>        ActionKind::Follow =&gt; (),
-<a href=#400 id=400 data-nosnippet>400</a>        other =&gt; <span class="macro">panic!</span>(<span class="string">"unexpected {other:?}"</span>),
-<a href=#401 id=401 data-nosnippet>401</a>    }
-<a href=#402 id=402 data-nosnippet>402</a>
-<a href=#403 id=403 data-nosnippet>403</a>    <span class="kw">let </span>next = Url::parse(<span class="string">"http://foo/baz"</span>).unwrap();
-<a href=#404 id=404 data-nosnippet>404</a>    <span class="kw">match </span>policy.check(StatusCode::FOUND, <span class="kw-2">&amp;</span>next, <span class="kw-2">&amp;</span>[]) {
-<a href=#405 id=405 data-nosnippet>405</a>        ActionKind::Stop =&gt; (),
-<a href=#406 id=406 data-nosnippet>406</a>        other =&gt; <span class="macro">panic!</span>(<span class="string">"unexpected {other:?}"</span>),
-<a href=#407 id=407 data-nosnippet>407</a>    }
-<a href=#408 id=408 data-nosnippet>408</a>}
-<a href=#409 id=409 data-nosnippet>409</a>
-<a href=#410 id=410 data-nosnippet>410</a><span class="attr">#[test]
-<a href=#411 id=411 data-nosnippet>411</a></span><span class="kw">fn </span>test_remove_sensitive_headers() {
-<a href=#412 id=412 data-nosnippet>412</a>    <span class="kw">use </span>hyper::header::{HeaderValue, ACCEPT, AUTHORIZATION, COOKIE};
-<a href=#413 id=413 data-nosnippet>413</a>
-<a href=#414 id=414 data-nosnippet>414</a>    <span class="kw">let </span><span class="kw-2">mut </span>headers = HeaderMap::new();
-<a href=#415 id=415 data-nosnippet>415</a>    headers.insert(ACCEPT, HeaderValue::from_static(<span class="string">"*/*"</span>));
-<a href=#416 id=416 data-nosnippet>416</a>    headers.insert(AUTHORIZATION, HeaderValue::from_static(<span class="string">"let me in"</span>));
-<a href=#417 id=417 data-nosnippet>417</a>    headers.insert(COOKIE, HeaderValue::from_static(<span class="string">"foo=bar"</span>));
-<a href=#418 id=418 data-nosnippet>418</a>
-<a href=#419 id=419 data-nosnippet>419</a>    <span class="kw">let </span>next = Url::parse(<span class="string">"http://initial-domain.com/path"</span>).unwrap();
-<a href=#420 id=420 data-nosnippet>420</a>    <span class="kw">let </span><span class="kw-2">mut </span>prev = <span class="macro">vec!</span>[Url::parse(<span class="string">"http://initial-domain.com/new_path"</span>).unwrap()];
-<a href=#421 id=421 data-nosnippet>421</a>    <span class="kw">let </span><span class="kw-2">mut </span>filtered_headers = headers.clone();
-<a href=#422 id=422 data-nosnippet>422</a>
-<a href=#423 id=423 data-nosnippet>423</a>    remove_sensitive_headers(<span class="kw-2">&amp;mut </span>headers, <span class="kw-2">&amp;</span>next, <span class="kw-2">&amp;</span>prev);
-<a href=#424 id=424 data-nosnippet>424</a>    <span class="macro">assert_eq!</span>(headers, filtered_headers);
-<a href=#425 id=425 data-nosnippet>425</a>
-<a href=#426 id=426 data-nosnippet>426</a>    prev.push(Url::parse(<span class="string">"http://new-domain.com/path"</span>).unwrap());
-<a href=#427 id=427 data-nosnippet>427</a>    filtered_headers.remove(AUTHORIZATION);
-<a href=#428 id=428 data-nosnippet>428</a>    filtered_headers.remove(COOKIE);
-<a href=#429 id=429 data-nosnippet>429</a>
-<a href=#430 id=430 data-nosnippet>430</a>    remove_sensitive_headers(<span class="kw-2">&amp;mut </span>headers, <span class="kw-2">&amp;</span>next, <span class="kw-2">&amp;</span>prev);
-<a href=#431 id=431 data-nosnippet>431</a>    <span class="macro">assert_eq!</span>(headers, filtered_headers);
-<a href=#432 id=432 data-nosnippet>432</a>}</code></pre></div></section></main></body></html>
+<a href=#315 id=315 data-nosnippet>315</a>        <span class="self">self</span>.urls.push(previous_url.clone());
+<a href=#316 id=316 data-nosnippet>316</a>
+<a href=#317 id=317 data-nosnippet>317</a>        <span class="kw">match </span><span class="self">self</span>.policy.check(attempt.status(), <span class="kw-2">&amp;</span>next_url, <span class="kw-2">&amp;</span><span class="self">self</span>.urls) {
+<a href=#318 id=318 data-nosnippet>318</a>            ActionKind::Follow =&gt; {
+<a href=#319 id=319 data-nosnippet>319</a>                <span class="kw">if </span>next_url.scheme() != <span class="string">"http" </span>&amp;&amp; next_url.scheme() != <span class="string">"https" </span>{
+<a href=#320 id=320 data-nosnippet>320</a>                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="kw">crate</span>::error::url_bad_scheme(next_url));
+<a href=#321 id=321 data-nosnippet>321</a>                }
+<a href=#322 id=322 data-nosnippet>322</a>
+<a href=#323 id=323 data-nosnippet>323</a>                <span class="kw">if </span><span class="self">self</span>.https_only &amp;&amp; next_url.scheme() != <span class="string">"https" </span>{
+<a href=#324 id=324 data-nosnippet>324</a>                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="kw">crate</span>::error::redirect(
+<a href=#325 id=325 data-nosnippet>325</a>                        <span class="kw">crate</span>::error::url_bad_scheme(next_url.clone()),
+<a href=#326 id=326 data-nosnippet>326</a>                        next_url,
+<a href=#327 id=327 data-nosnippet>327</a>                    ));
+<a href=#328 id=328 data-nosnippet>328</a>                }
+<a href=#329 id=329 data-nosnippet>329</a>                <span class="prelude-val">Ok</span>(TowerAction::Follow)
+<a href=#330 id=330 data-nosnippet>330</a>            }
+<a href=#331 id=331 data-nosnippet>331</a>            ActionKind::Stop =&gt; <span class="prelude-val">Ok</span>(TowerAction::Stop),
+<a href=#332 id=332 data-nosnippet>332</a>            ActionKind::Error(e) =&gt; <span class="prelude-val">Err</span>(<span class="kw">crate</span>::error::redirect(e, previous_url)),
+<a href=#333 id=333 data-nosnippet>333</a>        }
+<a href=#334 id=334 data-nosnippet>334</a>    }
+<a href=#335 id=335 data-nosnippet>335</a>
+<a href=#336 id=336 data-nosnippet>336</a>    <span class="kw">fn </span>on_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>, req: <span class="kw-2">&amp;mut </span>http::Request&lt;async_impl::body::Body&gt;) {
+<a href=#337 id=337 data-nosnippet>337</a>        <span class="kw">if let </span><span class="prelude-val">Ok</span>(next_url) = Url::parse(<span class="kw-2">&amp;</span>req.uri().to_string()) {
+<a href=#338 id=338 data-nosnippet>338</a>            remove_sensitive_headers(req.headers_mut(), <span class="kw-2">&amp;</span>next_url, <span class="kw-2">&amp;</span><span class="self">self</span>.urls);
+<a href=#339 id=339 data-nosnippet>339</a>            <span class="kw">if </span><span class="self">self</span>.referer {
+<a href=#340 id=340 data-nosnippet>340</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(previous_url) = <span class="self">self</span>.urls.last() {
+<a href=#341 id=341 data-nosnippet>341</a>                    <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = make_referer(<span class="kw-2">&amp;</span>next_url, previous_url) {
+<a href=#342 id=342 data-nosnippet>342</a>                        req.headers_mut().insert(REFERER, v);
+<a href=#343 id=343 data-nosnippet>343</a>                    }
+<a href=#344 id=344 data-nosnippet>344</a>                }
+<a href=#345 id=345 data-nosnippet>345</a>            }
+<a href=#346 id=346 data-nosnippet>346</a>        };
+<a href=#347 id=347 data-nosnippet>347</a>    }
+<a href=#348 id=348 data-nosnippet>348</a>
+<a href=#349 id=349 data-nosnippet>349</a>    <span class="comment">// This is must implemented to make 307 and 308 redirects work
+<a href=#350 id=350 data-nosnippet>350</a>    </span><span class="kw">fn </span>clone_body(<span class="kw-2">&amp;</span><span class="self">self</span>, body: <span class="kw-2">&amp;</span>async_impl::body::Body) -&gt; <span class="prelude-ty">Option</span>&lt;async_impl::body::Body&gt; {
+<a href=#351 id=351 data-nosnippet>351</a>        body.try_clone()
+<a href=#352 id=352 data-nosnippet>352</a>    }
+<a href=#353 id=353 data-nosnippet>353</a>}
+<a href=#354 id=354 data-nosnippet>354</a>
+<a href=#355 id=355 data-nosnippet>355</a><span class="attr">#[test]
+<a href=#356 id=356 data-nosnippet>356</a></span><span class="kw">fn </span>test_redirect_policy_limit() {
+<a href=#357 id=357 data-nosnippet>357</a>    <span class="kw">let </span>policy = Policy::default();
+<a href=#358 id=358 data-nosnippet>358</a>    <span class="kw">let </span>next = Url::parse(<span class="string">"http://x.y/z"</span>).unwrap();
+<a href=#359 id=359 data-nosnippet>359</a>    <span class="kw">let </span><span class="kw-2">mut </span>previous = (<span class="number">0</span>..=<span class="number">9</span>)
+<a href=#360 id=360 data-nosnippet>360</a>        .map(|i| Url::parse(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"http://a.b/c/{i}"</span>)).unwrap())
+<a href=#361 id=361 data-nosnippet>361</a>        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+<a href=#362 id=362 data-nosnippet>362</a>
+<a href=#363 id=363 data-nosnippet>363</a>    <span class="kw">match </span>policy.check(StatusCode::FOUND, <span class="kw-2">&amp;</span>next, <span class="kw-2">&amp;</span>previous) {
+<a href=#364 id=364 data-nosnippet>364</a>        ActionKind::Follow =&gt; (),
+<a href=#365 id=365 data-nosnippet>365</a>        other =&gt; <span class="macro">panic!</span>(<span class="string">"unexpected {other:?}"</span>),
+<a href=#366 id=366 data-nosnippet>366</a>    }
+<a href=#367 id=367 data-nosnippet>367</a>
+<a href=#368 id=368 data-nosnippet>368</a>    previous.push(Url::parse(<span class="string">"http://a.b.d/e/33"</span>).unwrap());
+<a href=#369 id=369 data-nosnippet>369</a>
+<a href=#370 id=370 data-nosnippet>370</a>    <span class="kw">match </span>policy.check(StatusCode::FOUND, <span class="kw-2">&amp;</span>next, <span class="kw-2">&amp;</span>previous) {
+<a href=#371 id=371 data-nosnippet>371</a>        ActionKind::Error(err) <span class="kw">if </span>err.is::&lt;TooManyRedirects&gt;() =&gt; (),
+<a href=#372 id=372 data-nosnippet>372</a>        other =&gt; <span class="macro">panic!</span>(<span class="string">"unexpected {other:?}"</span>),
+<a href=#373 id=373 data-nosnippet>373</a>    }
+<a href=#374 id=374 data-nosnippet>374</a>}
+<a href=#375 id=375 data-nosnippet>375</a>
+<a href=#376 id=376 data-nosnippet>376</a><span class="attr">#[test]
+<a href=#377 id=377 data-nosnippet>377</a></span><span class="kw">fn </span>test_redirect_policy_limit_to_0() {
+<a href=#378 id=378 data-nosnippet>378</a>    <span class="kw">let </span>policy = Policy::limited(<span class="number">0</span>);
+<a href=#379 id=379 data-nosnippet>379</a>    <span class="kw">let </span>next = Url::parse(<span class="string">"http://x.y/z"</span>).unwrap();
+<a href=#380 id=380 data-nosnippet>380</a>    <span class="kw">let </span>previous = <span class="macro">vec!</span>[Url::parse(<span class="string">"http://a.b/c"</span>).unwrap()];
+<a href=#381 id=381 data-nosnippet>381</a>
+<a href=#382 id=382 data-nosnippet>382</a>    <span class="kw">match </span>policy.check(StatusCode::FOUND, <span class="kw-2">&amp;</span>next, <span class="kw-2">&amp;</span>previous) {
+<a href=#383 id=383 data-nosnippet>383</a>        ActionKind::Error(err) <span class="kw">if </span>err.is::&lt;TooManyRedirects&gt;() =&gt; (),
+<a href=#384 id=384 data-nosnippet>384</a>        other =&gt; <span class="macro">panic!</span>(<span class="string">"unexpected {other:?}"</span>),
+<a href=#385 id=385 data-nosnippet>385</a>    }
+<a href=#386 id=386 data-nosnippet>386</a>}
+<a href=#387 id=387 data-nosnippet>387</a>
+<a href=#388 id=388 data-nosnippet>388</a><span class="attr">#[test]
+<a href=#389 id=389 data-nosnippet>389</a></span><span class="kw">fn </span>test_redirect_policy_custom() {
+<a href=#390 id=390 data-nosnippet>390</a>    <span class="kw">let </span>policy = Policy::custom(|attempt| {
+<a href=#391 id=391 data-nosnippet>391</a>        <span class="kw">if </span>attempt.url().host_str() == <span class="prelude-val">Some</span>(<span class="string">"foo"</span>) {
+<a href=#392 id=392 data-nosnippet>392</a>            attempt.stop()
+<a href=#393 id=393 data-nosnippet>393</a>        } <span class="kw">else </span>{
+<a href=#394 id=394 data-nosnippet>394</a>            attempt.follow()
+<a href=#395 id=395 data-nosnippet>395</a>        }
+<a href=#396 id=396 data-nosnippet>396</a>    });
+<a href=#397 id=397 data-nosnippet>397</a>
+<a href=#398 id=398 data-nosnippet>398</a>    <span class="kw">let </span>next = Url::parse(<span class="string">"http://bar/baz"</span>).unwrap();
+<a href=#399 id=399 data-nosnippet>399</a>    <span class="kw">match </span>policy.check(StatusCode::FOUND, <span class="kw-2">&amp;</span>next, <span class="kw-2">&amp;</span>[]) {
+<a href=#400 id=400 data-nosnippet>400</a>        ActionKind::Follow =&gt; (),
+<a href=#401 id=401 data-nosnippet>401</a>        other =&gt; <span class="macro">panic!</span>(<span class="string">"unexpected {other:?}"</span>),
+<a href=#402 id=402 data-nosnippet>402</a>    }
+<a href=#403 id=403 data-nosnippet>403</a>
+<a href=#404 id=404 data-nosnippet>404</a>    <span class="kw">let </span>next = Url::parse(<span class="string">"http://foo/baz"</span>).unwrap();
+<a href=#405 id=405 data-nosnippet>405</a>    <span class="kw">match </span>policy.check(StatusCode::FOUND, <span class="kw-2">&amp;</span>next, <span class="kw-2">&amp;</span>[]) {
+<a href=#406 id=406 data-nosnippet>406</a>        ActionKind::Stop =&gt; (),
+<a href=#407 id=407 data-nosnippet>407</a>        other =&gt; <span class="macro">panic!</span>(<span class="string">"unexpected {other:?}"</span>),
+<a href=#408 id=408 data-nosnippet>408</a>    }
+<a href=#409 id=409 data-nosnippet>409</a>}
+<a href=#410 id=410 data-nosnippet>410</a>
+<a href=#411 id=411 data-nosnippet>411</a><span class="attr">#[test]
+<a href=#412 id=412 data-nosnippet>412</a></span><span class="kw">fn </span>test_remove_sensitive_headers() {
+<a href=#413 id=413 data-nosnippet>413</a>    <span class="kw">use </span>hyper::header::{HeaderValue, ACCEPT, AUTHORIZATION, COOKIE};
+<a href=#414 id=414 data-nosnippet>414</a>
+<a href=#415 id=415 data-nosnippet>415</a>    <span class="kw">let </span><span class="kw-2">mut </span>headers = HeaderMap::new();
+<a href=#416 id=416 data-nosnippet>416</a>    headers.insert(ACCEPT, HeaderValue::from_static(<span class="string">"*/*"</span>));
+<a href=#417 id=417 data-nosnippet>417</a>    headers.insert(AUTHORIZATION, HeaderValue::from_static(<span class="string">"let me in"</span>));
+<a href=#418 id=418 data-nosnippet>418</a>    headers.insert(COOKIE, HeaderValue::from_static(<span class="string">"foo=bar"</span>));
+<a href=#419 id=419 data-nosnippet>419</a>
+<a href=#420 id=420 data-nosnippet>420</a>    <span class="kw">let </span>next = Url::parse(<span class="string">"http://initial-domain.com/path"</span>).unwrap();
+<a href=#421 id=421 data-nosnippet>421</a>    <span class="kw">let </span><span class="kw-2">mut </span>prev = <span class="macro">vec!</span>[Url::parse(<span class="string">"http://initial-domain.com/new_path"</span>).unwrap()];
+<a href=#422 id=422 data-nosnippet>422</a>    <span class="kw">let </span><span class="kw-2">mut </span>filtered_headers = headers.clone();
+<a href=#423 id=423 data-nosnippet>423</a>
+<a href=#424 id=424 data-nosnippet>424</a>    remove_sensitive_headers(<span class="kw-2">&amp;mut </span>headers, <span class="kw-2">&amp;</span>next, <span class="kw-2">&amp;</span>prev);
+<a href=#425 id=425 data-nosnippet>425</a>    <span class="macro">assert_eq!</span>(headers, filtered_headers);
+<a href=#426 id=426 data-nosnippet>426</a>
+<a href=#427 id=427 data-nosnippet>427</a>    prev.push(Url::parse(<span class="string">"http://new-domain.com/path"</span>).unwrap());
+<a href=#428 id=428 data-nosnippet>428</a>    filtered_headers.remove(AUTHORIZATION);
+<a href=#429 id=429 data-nosnippet>429</a>    filtered_headers.remove(COOKIE);
+<a href=#430 id=430 data-nosnippet>430</a>
+<a href=#431 id=431 data-nosnippet>431</a>    remove_sensitive_headers(<span class="kw-2">&amp;mut </span>headers, <span class="kw-2">&amp;</span>next, <span class="kw-2">&amp;</span>prev);
+<a href=#432 id=432 data-nosnippet>432</a>    <span class="macro">assert_eq!</span>(headers, filtered_headers);
+<a href=#433 id=433 data-nosnippet>433</a>}</code></pre></div></section></main></body></html>
