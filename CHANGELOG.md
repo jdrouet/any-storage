@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3](https://github.com/jdrouet/any-storage/compare/v0.3.2...v0.3.3) - 2025-06-10
+
+### Other
+
+- *(deps)* Bump toml from 0.8.22 to 0.8.23 ([#16](https://github.com/jdrouet/any-storage/pull/16))
+- *(deps)* Bump reqwest from 0.12.16 to 0.12.19 ([#15](https://github.com/jdrouet/any-storage/pull/15))
+- *(deps)* Bump reqwest from 0.12.15 to 0.12.16 ([#13](https://github.com/jdrouet/any-storage/pull/13))
+- *(deps)* Bump tokio from 1.45.0 to 1.45.1 ([#11](https://github.com/jdrouet/any-storage/pull/11))
+
 ## [0.3.2](https://github.com/jdrouet/any-storage/compare/v0.3.1...v0.3.2) - 2025-05-24
 
 ### Added
